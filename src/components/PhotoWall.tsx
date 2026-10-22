@@ -1,24 +1,29 @@
+import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { useLoad } from '../hooks/useLoad'
 import { api, type Photo } from '../lib/api'
 import { formatLong, toISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
 import { BottomSheet } from './BottomSheet'
-import { IconPlus } from './icons'
-import { ErrorNote, Loading } from './Page'
+import { IconChevron, IconPlus } from './icons'
 
-/** Légère inclinaison stable par photo, comme des polaroids épinglés. */
-function tilt(id: string): number {
-  let h = 0
-  for (const c of id) h = (h * 31 + c.charCodeAt(0)) | 0
-  return ((Math.abs(h) % 7) - 3) * 0.8
-}
+// Emplacements de la pile (en % de la zone), comme des photos étalées sur une table.
+// La plus récente prend l'emplacement 0, tout en haut de la pile.
+const SLOTS = [
+  { top: 4, left: 12, rotate: -7 },
+  { top: 22, left: 28, rotate: 8 },
+  { top: 40, left: 4, rotate: -4 },
+  { top: 54, left: 24, rotate: 11 },
+  { top: 12, left: 30, rotate: -12 },
+  { top: 66, left: 8, rotate: 5 },
+]
 
+/** Pile de petits polaroids qui se chevauchent. Remplit son parent (position relative requise). */
 export function PhotoWall() {
-  const { data, error, loading, reload } = useLoad(api.getPhotos)
+  const { data, reload } = useLoad(api.getPhotos)
   const [urls, setUrls] = useState<Record<string, string>>({})
   const [adding, setAdding] = useState<File | null>(null)
-  const [viewing, setViewing] = useState<Photo | null>(null)
+  const [viewing, setViewing] = useState<number | null>(null)
 
   useEffect(() => {
     const paths = (data ?? []).map((p) => p.image_path).filter((p) => !urls[p])
@@ -26,60 +31,63 @@ export function PhotoWall() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data])
 
+  const photos = data ?? []
+  const pile = photos.slice(0, SLOTS.length)
+  const current = viewing !== null ? photos[viewing] : null
+
   return (
-    <section aria-labelledby="wall-title" className="mt-16">
-      <div className="mb-6 flex items-end justify-between gap-4">
-        <h2 id="wall-title" className="font-display text-[2.2rem] leading-none font-medium">
-          Notre mur
-        </h2>
-        <label className="btn-ghost cursor-pointer py-2 text-sm">
-          <IconPlus width={18} height={18} />
-          Ajouter
-          <input
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) setAdding(f)
-              e.target.value = ''
-            }}
-          />
-        </label>
-      </div>
-
-      {loading && <Loading />}
-      {error && <ErrorNote message={error} onRetry={reload} />}
-      {data && data.length === 0 && (
-        <p className="max-w-[36ch] text-mist">Le mur attend sa première photo. Ajoute un moment à nous avec le bouton ci-dessus.</p>
+    <div className="absolute inset-0" aria-label="Nos photos">
+      {pile.length === 0 && (
+        <div
+          className="absolute top-[18%] left-[12%] flex aspect-[4/5] w-[78%] -rotate-6 items-center justify-center border-2 border-dashed border-glow/40 p-3 text-center text-xs text-mist"
+          aria-hidden
+        >
+          Votre première photo ici
+        </div>
       )}
 
-      {data && data.length > 0 && (
-        <ul className="columns-2 gap-4 pb-4">
-          {data.map((p) => (
-            <li key={p.id} className="mb-5 break-inside-avoid">
-              <button
-                type="button"
-                onClick={() => setViewing(p)}
-                className="block w-full bg-starlight p-2 pb-3 text-left shadow-[0_10px_30px_rgb(0_0_0/0.45)] transition-transform active:scale-[0.98]"
-                style={{ transform: `rotate(${tilt(p.id)}deg)` }}
-                aria-label={p.caption || 'Voir la photo'}
-              >
-                {urls[p.image_path] ? (
-                  <img src={urls[p.image_path]} alt="" loading="lazy" className="block w-full" />
-                ) : (
-                  <span className="block aspect-[4/5] w-full bg-mist/30" />
-                )}
-                {p.caption && (
-                  <span className="font-display mt-2 block px-1 text-[1.05rem] leading-snug text-night italic">{p.caption}</span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+      {pile
+        .map((p, i) => ({ p, i, slot: SLOTS[i] }))
+        .reverse() // la plus ancienne dessinée d'abord, la plus récente par-dessus
+        .map(({ p, i, slot }) => (
+          <motion.button
+            key={p.id}
+            type="button"
+            onClick={() => setViewing(i)}
+            className="absolute w-[64%] bg-starlight p-1.5 pb-4 shadow-[0_8px_24px_rgb(0_0_0/0.55)]"
+            style={{ top: `${slot.top}%`, left: `${slot.left}%`, zIndex: SLOTS.length - i }}
+            initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
+            animate={{ opacity: 1, scale: 1, rotate: slot.rotate }}
+            whileTap={{ scale: 1.06 }}
+            transition={{ delay: 0.6 + (pile.length - i) * 0.12, type: 'spring', damping: 16, stiffness: 180 }}
+            aria-label={p.caption || 'Voir la photo'}
+          >
+            {urls[p.image_path] ? (
+              <img src={urls[p.image_path]} alt="" className="block aspect-square w-full object-cover" />
+            ) : (
+              <span className="block aspect-square w-full bg-mist/30" />
+            )}
+          </motion.button>
+        ))}
 
-      <BottomSheet open={Boolean(adding)} onClose={() => setAdding(null)} label="Ajouter une photo au mur">
+      <label
+        className="absolute right-0 bottom-0 z-20 flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border border-glow/40 bg-night/80 text-glow backdrop-blur"
+        aria-label="Ajouter une photo"
+      >
+        <IconPlus width={20} height={20} />
+        <input
+          type="file"
+          accept="image/*"
+          className="sr-only"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) setAdding(f)
+            e.target.value = ''
+          }}
+        />
+      </label>
+
+      <BottomSheet open={Boolean(adding)} onClose={() => setAdding(null)} label="Ajouter une photo">
         {adding && (
           <AddPhoto
             file={adding}
@@ -92,11 +100,15 @@ export function PhotoWall() {
         )}
       </BottomSheet>
 
-      <BottomSheet open={Boolean(viewing)} onClose={() => setViewing(null)} label="Photo">
-        {viewing && (
+      <BottomSheet open={Boolean(current)} onClose={() => setViewing(null)} label="Photo">
+        {current && viewing !== null && (
           <ViewPhoto
-            photo={viewing}
-            src={urls[viewing.image_path]}
+            key={current.id}
+            photo={current}
+            src={urls[current.image_path]}
+            position={`${viewing + 1} / ${photos.length}`}
+            onPrev={viewing > 0 ? () => setViewing(viewing - 1) : undefined}
+            onNext={viewing < photos.length - 1 ? () => setViewing(viewing + 1) : undefined}
             onDeleted={async () => {
               setViewing(null)
               await reload()
@@ -104,7 +116,7 @@ export function PhotoWall() {
           />
         )}
       </BottomSheet>
-    </section>
+    </div>
   )
 }
 
@@ -154,7 +166,7 @@ function AddPhoto({ file, onCancel, onDone }: { file: File; onCancel: () => void
       )}
       <div className="flex gap-3">
         <button type="button" className="btn-primary" disabled={busy} onClick={save}>
-          {busy ? 'Envoi…' : 'Ajouter au mur'}
+          {busy ? 'Envoi…' : 'Ajouter'}
         </button>
         <button type="button" className="btn-ghost" disabled={busy} onClick={onCancel}>
           Annuler
@@ -164,7 +176,21 @@ function AddPhoto({ file, onCancel, onDone }: { file: File; onCancel: () => void
   )
 }
 
-function ViewPhoto({ photo, src, onDeleted }: { photo: Photo; src?: string; onDeleted: () => Promise<void> }) {
+function ViewPhoto({
+  photo,
+  src,
+  position,
+  onPrev,
+  onNext,
+  onDeleted,
+}: {
+  photo: Photo
+  src?: string
+  position: string
+  onPrev?: () => void
+  onNext?: () => void
+  onDeleted: () => Promise<void>
+}) {
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -181,12 +207,33 @@ function ViewPhoto({ photo, src, onDeleted }: { photo: Photo; src?: string; onDe
   return (
     <div>
       {src && <img src={src} alt={photo.caption ?? ''} className="max-h-[60dvh] w-full rounded-xl object-contain" />}
-      {photo.caption && <p className="font-display mt-4 text-2xl italic">{photo.caption}</p>}
+      <div className="mt-3 flex items-center justify-between text-mist">
+        <button
+          type="button"
+          className="rounded-full p-2 disabled:opacity-25"
+          onClick={onPrev}
+          disabled={!onPrev}
+          aria-label="Photo précédente"
+        >
+          <IconChevron dir="left" />
+        </button>
+        <span className="text-sm tabular-nums">{position}</span>
+        <button
+          type="button"
+          className="rounded-full p-2 disabled:opacity-25"
+          onClick={onNext}
+          disabled={!onNext}
+          aria-label="Photo suivante"
+        >
+          <IconChevron />
+        </button>
+      </div>
+      {photo.caption && <p className="font-display mt-2 text-2xl italic">{photo.caption}</p>}
       <p className="mt-2 text-sm text-mist">Ajoutée le {formatLong(toISO(new Date(photo.created_at)))}</p>
       <div className="mt-5 border-t border-glow/10 pt-4 text-sm">
         {confirm ? (
           <div className="flex flex-wrap items-center gap-3">
-            <span className="text-mist">Retirer cette photo du mur ?</span>
+            <span className="text-mist">Retirer cette photo ?</span>
             <button type="button" className="rounded-full bg-rose/90 px-4 py-2 font-medium text-night" disabled={busy} onClick={remove}>
               Retirer
             </button>
@@ -196,7 +243,7 @@ function ViewPhoto({ photo, src, onDeleted }: { photo: Photo; src?: string; onDe
           </div>
         ) : (
           <button type="button" className="text-rose" onClick={() => setConfirm(true)}>
-            Retirer du mur
+            Retirer la photo
           </button>
         )}
       </div>

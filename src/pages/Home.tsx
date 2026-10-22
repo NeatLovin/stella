@@ -37,7 +37,7 @@ export function Home() {
   return (
     <Page>
       <motion.section
-        className="flex min-h-[calc(100dvh-var(--tabbar-h)-9rem)] flex-col justify-center md:min-h-[60dvh]"
+        className="flex min-h-[calc(100dvh-var(--tabbar-h)-6rem)] flex-col justify-center md:min-h-[70dvh]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.2 }}
@@ -48,17 +48,25 @@ export function Home() {
         </h1>
         <p className="mt-5 text-mist">Ensemble depuis le {formatLong(couple_start)}</p>
 
-        <div aria-label="Temps passé ensemble" className="mt-10 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1">
-          {rows.map(({ n, unit, live }, i) => (
-            <div key={i} className="contents">
-              <span
-                className={`font-display text-right text-7xl leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}
-              >
-                {n}
-              </span>
-              <span className="font-display text-2xl text-mist italic">{unit}</span>
-            </div>
-          ))}
+        <div className="mt-10 flex items-stretch gap-3">
+          <div
+            aria-label="Temps passé ensemble"
+            className="grid shrink-0 grid-cols-[auto_auto] content-start items-baseline gap-x-4 gap-y-1"
+          >
+            {rows.map(({ n, unit, live }, i) => (
+              <div key={i} className="contents">
+                <span
+                  className={`font-display text-right text-7xl leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}
+                >
+                  {n}
+                </span>
+                <span className="font-display text-2xl text-mist italic">{unit}</span>
+              </div>
+            ))}
+          </div>
+          <div className="relative min-h-64 min-w-0 flex-1 md:max-w-64">
+            <PhotoWall />
+          </div>
         </div>
 
         <p className="mt-12 flex items-center gap-2 text-sm text-mist">
@@ -74,7 +82,6 @@ export function Home() {
           </button>
         )}
       </motion.section>
-      <PhotoWall />
     </Page>
   )
 }
