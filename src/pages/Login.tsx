@@ -1,5 +1,6 @@
 import { motion } from 'motion/react'
 import { useState, type FormEvent } from 'react'
+import { setWelcomeFlag } from '../components/Welcome'
 import { api, isDemo } from '../lib/api'
 
 export function Login() {
@@ -13,6 +14,7 @@ export function Login() {
     setBusy(true)
     setError(null)
     try {
+      setWelcomeFlag()
       await api.signIn(password)
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''

@@ -1,14 +1,15 @@
 import { differenceInCalendarDays, intervalToDuration } from 'date-fns'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useSettings } from '../App'
+import { useSettings, useShowWelcome } from '../App'
 import { Page } from '../components/Page'
 import { formatLong, parse } from '../lib/dates'
 
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one)
 
 export function Home() {
-  const { her_name, his_name, couple_start } = useSettings()
+  const { her_name, his_name, couple_start, welcome } = useSettings()
+  const showWelcome = useShowWelcome()
   const [now, setNow] = useState(() => new Date())
 
   useEffect(() => {
@@ -49,7 +50,11 @@ export function Home() {
         <div aria-label="Temps passé ensemble" className="mt-10 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1">
           {rows.map(({ n, unit, live }, i) => (
             <div key={i} className="contents">
-              <span className={`font-display text-right text-7xl leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}>{n}</span>
+              <span
+                className={`font-display text-right text-7xl leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}
+              >
+                {n}
+              </span>
               <span className="font-display text-2xl text-mist italic">{unit}</span>
             </div>
           ))}
@@ -62,6 +67,11 @@ export function Home() {
             <sup>e</sup> jour ensemble
           </span>
         </p>
+        {welcome && (
+          <button type="button" onClick={showWelcome} className="mt-3 self-start text-sm text-glow underline-offset-4 hover:underline">
+            Relire mon mot
+          </button>
+        )}
       </motion.section>
     </Page>
   )

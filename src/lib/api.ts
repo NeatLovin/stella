@@ -7,6 +7,8 @@ export interface Settings {
   her_name: string
   his_name: string
   couple_start: ISODate
+  /** Mot d'accueil affiché après la connexion (paragraphes séparés par une ligne vide) */
+  welcome: string
 }
 
 export interface TimelineEvent {
@@ -100,6 +102,7 @@ function createSupabaseApi(): Api {
         her_name: map.her_name ?? '',
         his_name: map.his_name ?? '',
         couple_start: map.couple_start ?? '2026-07-30',
+        welcome: map.welcome ?? '',
       }
     },
     async getTimeline() {

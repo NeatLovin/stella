@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { Loading } from './components/Page'
+import { clearWelcomeFlag, hasWelcomeFlag, Welcome } from './components/Welcome'
 import { StarrySky } from './components/StarrySky'
 import { TabBar } from './components/TabBar'
 import { useLoad } from './hooks/useLoad'
@@ -12,25 +13,43 @@ import { Login } from './pages/Login'
 import { Timeline } from './pages/Timeline'
 import { Wishlist } from './pages/Wishlist'
 
-const SettingsContext = createContext<Settings>({ her_name: '', his_name: '', couple_start: '2026-07-30' })
+const SettingsContext = createContext<Settings>({ her_name: '', his_name: '', couple_start: '2026-07-30', welcome: '' })
 export const useSettings = () => useContext(SettingsContext)
+
+const WelcomeContext = createContext<() => void>(() => {})
+/** Rouvre le mot d'accueil (lien « Relire mon mot » sur l'accueil). */
+export const useShowWelcome = () => useContext(WelcomeContext)
 
 function Hub() {
   const { data: settings } = useLoad(api.getSettings)
+  const [welcome, setWelcome] = useState(hasWelcomeFlag)
   if (!settings) return <Loading />
+  if (welcome && settings.welcome) {
+    return (
+      <Welcome
+        text={settings.welcome}
+        onDone={() => {
+          clearWelcomeFlag()
+          setWelcome(false)
+        }}
+      />
+    )
+  }
   return (
     <SettingsContext.Provider value={settings}>
-      <HashRouter>
-        <TabBar />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/timeline" element={<Timeline />} />
-          <Route path="/bocal" element={<Jar />} />
-          <Route path="/wishlist" element={<Wishlist />} />
-          <Route path="/cycle" element={<Cycle />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </HashRouter>
+      <WelcomeContext.Provider value={() => setWelcome(true)}>
+        <HashRouter>
+          <TabBar />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/timeline" element={<Timeline />} />
+            <Route path="/bocal" element={<Jar />} />
+            <Route path="/wishlist" element={<Wishlist />} />
+            <Route path="/cycle" element={<Cycle />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </HashRouter>
+      </WelcomeContext.Provider>
     </SettingsContext.Provider>
   )
 }

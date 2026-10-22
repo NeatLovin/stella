@@ -71,7 +71,12 @@ export function createDemoApi(): Api {
       emit()
     },
     async getSettings() {
-      return { her_name: 'Elle', his_name: 'Lui', couple_start: '2026-06-20' }
+      return {
+        her_name: 'Elle',
+        his_name: 'Lui',
+        couple_start: '2026-06-20',
+        welcome: 'Premier paragraphe du mot d’accueil.\n\nDeuxième paragraphe, un peu plus long pour voir comment le texte respire sur plusieurs lignes.\n\nTroisième paragraphe.',
+      }
     },
     async getTimeline() {
       await wait()
