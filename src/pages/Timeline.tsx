@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
+import { Lightbox } from '../components/Lightbox'
 import { ErrorNote, Loading, Page } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api, type TimelineEvent } from '../lib/api'
@@ -129,6 +130,7 @@ function Constellation({ events, onSelect }: { events: TimelineEvent[]; onSelect
 
 function EventDetail({ event, src, onChanged }: { event: TimelineEvent; src?: string; onChanged: () => Promise<void> }) {
   const ago = diffDays(todayISO(), event.date_start)
+  const [zoom, setZoom] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -151,7 +153,20 @@ function EventDetail({ event, src, onChanged }: { event: TimelineEvent; src?: st
     <article className="pb-2">
       {event.image_path ? (
         <div className="-mx-2 mb-5 overflow-hidden rounded-[1.25rem] border border-glow/15 bg-dusk/60">
-          {src ? <img src={src} alt={event.title} className="max-h-[48dvh] w-full object-cover" /> : <div className="aspect-[4/3]" />}
+          {src ? (
+            <button type="button" onClick={() => setZoom(true)} className="relative block w-full" aria-label="Voir la photo en plein écran">
+              <img src={src} alt={event.title} className="max-h-[48dvh] w-full object-cover" />
+              <span
+                className="absolute right-2 bottom-2 rounded-full bg-night/70 px-2.5 py-1 text-xs text-starlight backdrop-blur"
+                aria-hidden
+              >
+                ⤢ Agrandir
+              </span>
+            </button>
+          ) : (
+            <div className="aspect-[4/3]" />
+          )}
+          <Lightbox src={zoom && src ? src : null} alt={event.title} onClose={() => setZoom(false)} />
         </div>
       ) : (
         <div className="text-5xl" aria-hidden>

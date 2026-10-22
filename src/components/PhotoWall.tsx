@@ -5,6 +5,7 @@ import { api, type Photo } from '../lib/api'
 import { formatLong, toISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
 import { BottomSheet } from './BottomSheet'
+import { Lightbox } from './Lightbox'
 import { IconChevron, IconPlus } from './icons'
 
 // Emplacements de la pile (en % de la zone), comme des photos étalées sur une table.
@@ -192,6 +193,7 @@ function ViewPhoto({
   onDeleted: () => Promise<void>
 }) {
   const [confirm, setConfirm] = useState(false)
+  const [zoom, setZoom] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const remove = async () => {
@@ -206,7 +208,12 @@ function ViewPhoto({
 
   return (
     <div>
-      {src && <img src={src} alt={photo.caption ?? ''} className="max-h-[60dvh] w-full rounded-xl object-contain" />}
+      {src && (
+        <button type="button" onClick={() => setZoom(true)} className="block w-full" aria-label="Voir la photo en plein écran">
+          <img src={src} alt={photo.caption ?? ''} className="max-h-[60dvh] w-full rounded-xl object-contain" />
+        </button>
+      )}
+      <Lightbox src={zoom && src ? src : null} alt={photo.caption ?? ''} onClose={() => setZoom(false)} />
       <div className="mt-3 flex items-center justify-between text-mist">
         <button
           type="button"
