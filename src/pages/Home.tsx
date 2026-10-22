@@ -5,7 +5,6 @@ import { useSettings } from '../App'
 import { Page } from '../components/Page'
 import { formatLong, parse } from '../lib/dates'
 
-const pad = (n: number) => String(n).padStart(2, '0')
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one)
 
 export function Home() {
@@ -28,7 +27,10 @@ export function Home() {
     years > 0 && { n: years, unit: plural(years, 'an', 'ans') },
     (years > 0 || months > 0) && { n: months, unit: 'mois' },
     { n: days, unit: plural(days, 'jour', 'jours') },
-  ].filter(Boolean) as { n: number; unit: string }[]
+    { n: d.hours ?? 0, unit: plural(d.hours ?? 0, 'heure', 'heures') },
+    { n: d.minutes ?? 0, unit: plural(d.minutes ?? 0, 'minute', 'minutes') },
+    { n: d.seconds ?? 0, unit: plural(d.seconds ?? 0, 'seconde', 'secondes'), live: true },
+  ].filter(Boolean) as { n: number; unit: string; live?: boolean }[]
 
   return (
     <Page>
@@ -44,16 +46,13 @@ export function Home() {
         </h1>
         <p className="mt-5 text-mist">Ensemble depuis le {formatLong(couple_start)}</p>
 
-        <div aria-label="Temps passé ensemble" className="mt-12 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1">
-          {rows.map(({ n, unit }) => (
-            <div key={unit} className="contents">
-              <span className="font-display text-right text-7xl leading-none font-medium tabular-nums">{n}</span>
+        <div aria-label="Temps passé ensemble" className="mt-10 grid grid-cols-[auto_1fr] items-baseline gap-x-4 gap-y-1">
+          {rows.map(({ n, unit, live }, i) => (
+            <div key={i} className="contents">
+              <span className={`font-display text-right text-7xl leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}>{n}</span>
               <span className="font-display text-2xl text-mist italic">{unit}</span>
             </div>
           ))}
-          <span className="col-start-2 pt-3 text-xl tracking-wide text-starlight/85 tabular-nums">
-            {pad(d.hours ?? 0)} h {pad(d.minutes ?? 0)} min <span className="text-glow">{pad(d.seconds ?? 0)}</span> s
-          </span>
         </div>
 
         <p className="mt-12 flex items-center gap-2 text-sm text-mist">
