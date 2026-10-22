@@ -163,4 +163,20 @@ function createSupabaseApi(): Api {
 }
 
 export const isDemo = import.meta.env.VITE_DEMO === '1'
-export const api: Api = isDemo ? createDemoApi() : createSupabaseApi()
+
+/** Message d'erreur si les variables Supabase manquent au build (affiché par App au lieu d'une page blanche). */
+export let configError: string | null = null
+
+function createApi(): Api {
+  if (isDemo) return createDemoApi()
+  try {
+    return createSupabaseApi()
+  } catch (e) {
+    configError = e instanceof Error ? e.message : String(e)
+    return new Proxy({} as Api, {
+      get: () => () => Promise.reject(new Error(configError!)),
+    })
+  }
+}
+
+export const api: Api = createApi()

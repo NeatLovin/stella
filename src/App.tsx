@@ -4,7 +4,7 @@ import { Loading } from './components/Page'
 import { StarrySky } from './components/StarrySky'
 import { TabBar } from './components/TabBar'
 import { useLoad } from './hooks/useLoad'
-import { api, type Settings } from './lib/api'
+import { api, configError, type Settings } from './lib/api'
 import { Cycle } from './pages/Cycle'
 import { Home } from './pages/Home'
 import { Jar } from './pages/Jar'
@@ -35,13 +35,35 @@ function Hub() {
   )
 }
 
+function ConfigMissing() {
+  return (
+    <main className="flex min-h-dvh items-center justify-center px-6 text-center">
+      <div className="max-w-sm">
+        <h1 className="font-display text-3xl">Bientôt prêt</h1>
+        <p className="mt-3 text-mist">Le site n’est pas encore relié à sa base de données.</p>
+        <p className="mt-4 text-xs text-mist/60">{configError}</p>
+      </div>
+    </main>
+  )
+}
+
 export default function App() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
 
   useEffect(() => {
+    if (configError) return
     void api.getSession().then((s) => setSignedIn(Boolean(s)))
     return api.onAuthChange(setSignedIn)
   }, [])
+
+  if (configError) {
+    return (
+      <>
+        <StarrySky />
+        <ConfigMissing />
+      </>
+    )
+  }
 
   return (
     <>
