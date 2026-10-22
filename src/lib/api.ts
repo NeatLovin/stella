@@ -108,7 +108,7 @@ function createSupabaseApi(): Api {
       }
     },
     async getTimeline() {
-      return check(await sb.from('timeline_events').select('*').order('date_start')) as TimelineEvent[]
+      return check(await sb.from('timeline_events').select('*').order('date_start').order('created_at')) as TimelineEvent[]
     },
     async setEventImage(id, image_path) {
       check(await sb.from('timeline_events').update({ image_path }).eq('id', id))
