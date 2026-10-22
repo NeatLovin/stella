@@ -1,0 +1,13 @@
+{
+  "name": "Stella",
+  "short_name": "Stella",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#070B24",
+  "theme_color": "#070B24",
+  "icons": [
+    { "src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
