@@ -85,9 +85,6 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
         <JarArt count={reasons.length} />
         <span className="btn-ghost mt-5">Tirer une autre raison</span>
       </button>
-      <p className="mt-4 text-sm text-mist">
-        {reasons.length} {reasons.length > 1 ? 'raisons' : 'raison'} dans le bocal
-      </p>
     </div>
   )
 }
