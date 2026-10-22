@@ -4,6 +4,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { Lightbox } from '../components/Lightbox'
 import { ErrorNote, Loading, Page } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
+import { useImageUrls } from '../hooks/useImageUrls'
 import { api, type TimelineEvent } from '../lib/api'
 import { diffDays, formatRange, formatShort, todayISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
@@ -15,15 +16,9 @@ const TOP = 40
 
 export function Timeline() {
   const { data, error, loading, reload } = useLoad(api.getTimeline)
+  const urls = useImageUrls((data ?? []).map((e) => e.image_path))
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [urls, setUrls] = useState<Record<string, string>>({})
   const selected = data?.find((e) => e.id === selectedId) ?? null
-
-  useEffect(() => {
-    const paths = (data ?? []).map((e) => e.image_path).filter((p): p is string => Boolean(p) && !urls[p!])
-    if (paths.length) void api.imageUrls(paths).then((u) => setUrls((prev) => ({ ...prev, ...u })))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
 
   return (
     <Page title="Notre constellation" intro="Chaque étoile est un moment à nous. Touche-en une pour la revoir.">
@@ -166,7 +161,7 @@ function EventDetail({ event, src, onChanged }: { event: TimelineEvent; src?: st
           ) : (
             <div className="aspect-[4/3]" />
           )}
-          <Lightbox src={zoom && src ? src : null} alt={event.title} onClose={() => setZoom(false)} />
+          <Lightbox images={[{ src, alt: event.title }]} index={zoom ? 0 : null} onClose={() => setZoom(false)} />
         </div>
       ) : (
         <div className="text-5xl" aria-hidden>

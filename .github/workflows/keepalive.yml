@@ -1,0 +1,30 @@
+# Empêche Supabase (plan gratuit) de mettre le projet en pause après 7 jours sans activité :
+# une requête quotidienne à la base via la fonction public.keepalive().
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: '17 5 * * *' # tous les jours vers 7 h en Suisse
+  workflow_dispatch:
+
+permissions:
+  actions: write # pour se réactiver lui-même (GitHub coupe les tâches planifiées après 60 j sans activité sur le repo)
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Requête à la base
+        env:
+          URL: ${{ vars.VITE_SUPABASE_URL }}
+          KEY: ${{ vars.VITE_SUPABASE_KEY }}
+        run: |
+          code=$(curl -s -o /tmp/out -w '%{http_code}' -X POST "$URL/rest/v1/rpc/keepalive" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{}')
+          echo "HTTP $code : $(cat /tmp/out)"
+          test "$code" = 200
+
+      - name: Garder la tâche planifiée active
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/keepalive.yml/enable" || true

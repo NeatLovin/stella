@@ -3,6 +3,7 @@ import { BottomSheet } from '../components/BottomSheet'
 import { IconExternal, IconGift, IconImage, IconPlus } from '../components/icons'
 import { ErrorNote, Loading, Page } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
+import { useImageUrls } from '../hooks/useImageUrls'
 import { api, type WishlistItem } from '../lib/api'
 import { compressImage } from '../lib/image'
 
@@ -10,14 +11,8 @@ type Editing = { mode: 'new' } | { mode: 'edit'; item: WishlistItem }
 
 export function Wishlist() {
   const { data, error, loading, reload } = useLoad(api.getWishlist)
-  const [urls, setUrls] = useState<Record<string, string>>({})
+  const urls = useImageUrls((data ?? []).map((w) => w.image_path))
   const [editing, setEditing] = useState<Editing | null>(null)
-
-  useEffect(() => {
-    const paths = (data ?? []).map((w) => w.image_path).filter((p): p is string => Boolean(p) && !urls[p!])
-    if (paths.length) void api.imageUrls(paths).then((u) => setUrls((prev) => ({ ...prev, ...u })))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
 
   const close = () => setEditing(null)
   const saved = async () => {
@@ -34,15 +29,17 @@ export function Wishlist() {
 
       {loading && <Loading />}
       {error && <ErrorNote message={error} onRetry={reload} />}
-      {data && data.length === 0 && (
-        <p className="text-mist">Ta wishlist est vide. Ajoute ta première envie avec le bouton ci-dessus.</p>
-      )}
+      {data && data.length === 0 && <p className="text-mist">Ta wishlist est vide. Ajoute ta première envie avec le bouton ci-dessus.</p>}
 
       {data && data.length > 0 && (
         <ul className="grid grid-cols-2 gap-x-4 gap-y-7">
           {data.map((item) => (
             <li key={item.id}>
-              <WishCard item={item} src={item.image_path ? urls[item.image_path] : undefined} onEdit={() => setEditing({ mode: 'edit', item })} />
+              <WishCard
+                item={item}
+                src={item.image_path ? urls[item.image_path] : undefined}
+                onEdit={() => setEditing({ mode: 'edit', item })}
+              />
             </li>
           ))}
         </ul>
@@ -166,12 +163,28 @@ function WishForm({
 
       <label className="block">
         <span className="mb-1.5 block text-sm text-mist">Nom</span>
-        <input className="field" value={name} onChange={(e) => setName(e.target.value)} required maxLength={120} placeholder="Ce qui te fait envie" />
+        <input
+          className="field"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          maxLength={120}
+          placeholder="Ce qui te fait envie"
+        />
       </label>
 
       <label className="block">
         <span className="mb-1.5 block text-sm text-mist">Lien (facultatif)</span>
-        <input className="field" type="text" inputMode="url" autoCapitalize="none" autoCorrect="off" value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+        <input
+          className="field"
+          type="text"
+          inputMode="url"
+          autoCapitalize="none"
+          autoCorrect="off"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://…"
+        />
       </label>
 
       <div>
@@ -238,7 +251,12 @@ function WishForm({
           {confirmDelete ? (
             <div className="flex flex-wrap items-center gap-3">
               <span className="text-sm text-mist">Supprimer « {item.name} » ?</span>
-              <button type="button" className="rounded-full bg-rose/90 px-4 py-2 text-sm font-medium text-night" onClick={remove} disabled={busy}>
+              <button
+                type="button"
+                className="rounded-full bg-rose/90 px-4 py-2 text-sm font-medium text-night"
+                onClick={remove}
+                disabled={busy}
+              >
                 Supprimer
               </button>
               <button type="button" className="text-sm text-mist underline underline-offset-4" onClick={() => setConfirmDelete(false)}>

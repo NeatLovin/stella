@@ -113,7 +113,17 @@ function JarArt({ count }: { count: number }) {
       </defs>
       <g clipPath="url(#jar-body)">
         {papers.map((p, i) => (
-          <rect key={i} x={p.x - 6} y={p.y - 4} width="12" height="8" rx="1.5" fill={p.c} opacity="0.85" transform={`rotate(${p.r} ${p.x} ${p.y})`} />
+          <rect
+            key={i}
+            x={p.x - 6}
+            y={p.y - 4}
+            width="12"
+            height="8"
+            rx="1.5"
+            fill={p.c}
+            opacity="0.85"
+            transform={`rotate(${p.r} ${p.x} ${p.y})`}
+          />
         ))}
       </g>
       <path

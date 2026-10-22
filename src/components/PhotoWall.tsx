@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { useLoad } from '../hooks/useLoad'
+import { useImageUrls } from '../hooks/useImageUrls'
 import { api, type Photo } from '../lib/api'
 import { formatLong, toISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
@@ -22,15 +23,10 @@ const SLOTS = [
 /** Pile de petits polaroids qui se chevauchent. Remplit son parent (position relative requise). */
 export function PhotoWall() {
   const { data, reload } = useLoad(api.getPhotos)
-  const [urls, setUrls] = useState<Record<string, string>>({})
+  const urls = useImageUrls((data ?? []).map((p) => p.image_path))
   const [adding, setAdding] = useState<File | null>(null)
   const [viewing, setViewing] = useState<number | null>(null)
-
-  useEffect(() => {
-    const paths = (data ?? []).map((p) => p.image_path).filter((p) => !urls[p])
-    if (paths.length) void api.imageUrls(paths).then((u) => setUrls((prev) => ({ ...prev, ...u })))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data])
+  const [zoom, setZoom] = useState(false)
 
   const photos = data ?? []
   const pile = photos.slice(0, SLOTS.length)
@@ -108,6 +104,7 @@ export function PhotoWall() {
             photo={current}
             src={urls[current.image_path]}
             position={`${viewing + 1} / ${photos.length}`}
+            onZoom={() => setZoom(true)}
             onPrev={viewing > 0 ? () => setViewing(viewing - 1) : undefined}
             onNext={viewing < photos.length - 1 ? () => setViewing(viewing + 1) : undefined}
             onDeleted={async () => {
@@ -117,6 +114,13 @@ export function PhotoWall() {
           />
         )}
       </BottomSheet>
+
+      <Lightbox
+        images={photos.map((p) => ({ src: urls[p.image_path], alt: p.caption ?? '' }))}
+        index={zoom ? viewing : null}
+        onIndexChange={setViewing}
+        onClose={() => setZoom(false)}
+      />
     </div>
   )
 }
@@ -181,6 +185,7 @@ function ViewPhoto({
   photo,
   src,
   position,
+  onZoom,
   onPrev,
   onNext,
   onDeleted,
@@ -188,12 +193,12 @@ function ViewPhoto({
   photo: Photo
   src?: string
   position: string
+  onZoom: () => void
   onPrev?: () => void
   onNext?: () => void
   onDeleted: () => Promise<void>
 }) {
   const [confirm, setConfirm] = useState(false)
-  const [zoom, setZoom] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const remove = async () => {
@@ -209,11 +214,10 @@ function ViewPhoto({
   return (
     <div>
       {src && (
-        <button type="button" onClick={() => setZoom(true)} className="block w-full" aria-label="Voir la photo en plein écran">
+        <button type="button" onClick={onZoom} className="block w-full" aria-label="Voir la photo en plein écran">
           <img src={src} alt={photo.caption ?? ''} className="max-h-[60dvh] w-full rounded-xl object-contain" />
         </button>
       )}
-      <Lightbox src={zoom && src ? src : null} alt={photo.caption ?? ''} onClose={() => setZoom(false)} />
       <div className="mt-3 flex items-center justify-between text-mist">
         <button
           type="button"

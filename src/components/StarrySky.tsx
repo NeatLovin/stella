@@ -99,7 +99,13 @@ export function StarrySky() {
       last = t
       if (!shooting && t > nextShot) {
         const angle = Math.PI / 5 + Math.random() * 0.3
-        shooting = { x: Math.random() * w * 0.7 + w * 0.2, y: Math.random() * h * 0.35, vx: -Math.cos(angle) * 9, vy: Math.sin(angle) * 9, life: 1 }
+        shooting = {
+          x: Math.random() * w * 0.7 + w * 0.2,
+          y: Math.random() * h * 0.35,
+          vx: -Math.cos(angle) * 9,
+          vy: Math.sin(angle) * 9,
+          life: 1,
+        }
       }
       if (shooting) {
         shooting.x += shooting.vx

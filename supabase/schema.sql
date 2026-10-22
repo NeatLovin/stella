@@ -92,3 +92,15 @@ create policy "wishlist authenticated access" on storage.objects
   for all to authenticated
   using (bucket_id = 'wishlist')
   with check (bucket_id = 'wishlist');
+
+-- Anti-pause (plan gratuit) : une tâche GitHub Actions appelle cette fonction chaque jour.
+-- Elle ne renvoie qu'un nombre, aucune donnée.
+create or replace function public.keepalive()
+returns integer
+language sql
+security definer
+set search_path = public
+as $$ select count(*)::int from public.settings $$;
+
+revoke all on function public.keepalive() from public;
+grant execute on function public.keepalive() to anon, authenticated;

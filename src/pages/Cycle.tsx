@@ -6,7 +6,17 @@ import { IconChevron } from '../components/icons'
 import { ErrorNote, Loading, Page } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api } from '../lib/api'
-import { computeCycle, markDay, PHASE_LABEL, periodEnd, type CycleState, type DayMark, type Ovulation, type Period, type Phase } from '../lib/cycle'
+import {
+  computeCycle,
+  markDay,
+  PHASE_LABEL,
+  periodEnd,
+  type CycleState,
+  type DayMark,
+  type Ovulation,
+  type Period,
+  type Phase,
+} from '../lib/cycle'
 import { diffDays, formatLong, formatShort, plusDays, toISO, todayISO, type ISODate } from '../lib/dates'
 
 const PHASE_COLOR: Record<Phase, string> = {
@@ -66,7 +76,8 @@ function CycleContent({
   }
 
   const last = periods.filter((p) => p.start_date <= today).at(-1)
-  const ongoing = last && !last.end_date && diffDays(today, last.start_date) < 10 && (state.status !== 'ok' || today <= plusDays(state.lastEnd, 4))
+  const ongoing =
+    last && !last.end_date && diffDays(today, last.start_date) < 10 && (state.status !== 'ok' || today <= plusDays(state.lastEnd, 4))
   const startedToday = periods.some((p) => p.start_date === today)
   const ovulationToday = ovulations.find((o) => o.date === today)
 
@@ -79,7 +90,12 @@ function CycleContent({
           <Ring state={state} />
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             {ongoing ? (
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => run(() => api.updatePeriod(last!.id, { end_date: today }))}>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={busy}
+                onClick={() => run(() => api.updatePeriod(last!.id, { end_date: today }))}
+              >
                 Mes règles sont terminées
               </button>
             ) : (
@@ -116,8 +132,8 @@ function CycleContent({
 
       <p className="mt-8 text-sm leading-relaxed text-mist/80">
         Prévisions indicatives, calculées sur la moyenne de tes derniers cycles
-        {state.status === 'ok' && state.usingDefaults ? ' (28 jours par défaut tant qu’il y a moins de 2 cycles)' : ''}. Ce
-        n’est pas une méthode de contraception.
+        {state.status === 'ok' && state.usingDefaults ? ' (28 jours par défaut tant qu’il y a moins de 2 cycles)' : ''}. Ce n’est pas une
+        méthode de contraception.
       </p>
 
       <BottomSheet open={Boolean(selectedDay)} onClose={() => setSelectedDay(null)} label="Modifier ce jour">
@@ -245,11 +261,21 @@ function Calendar({
   return (
     <section className="mt-12" aria-label="Calendrier">
       <div className="mb-4 flex items-center justify-between">
-        <button type="button" className="rounded-full p-2 text-mist hover:text-starlight" onClick={() => setOffset((o) => o - 1)} aria-label="Mois précédent">
+        <button
+          type="button"
+          className="rounded-full p-2 text-mist hover:text-starlight"
+          onClick={() => setOffset((o) => o - 1)}
+          aria-label="Mois précédent"
+        >
           <IconChevron dir="left" />
         </button>
         <h2 className="font-display text-2xl capitalize">{format(month, 'MMMM yyyy', { locale: fr })}</h2>
-        <button type="button" className="rounded-full p-2 text-mist hover:text-starlight" onClick={() => setOffset((o) => o + 1)} aria-label="Mois suivant">
+        <button
+          type="button"
+          className="rounded-full p-2 text-mist hover:text-starlight"
+          onClick={() => setOffset((o) => o + 1)}
+          aria-label="Mois suivant"
+        >
           <IconChevron />
         </button>
       </div>
@@ -346,7 +372,9 @@ function DayActions({
 
   return (
     <div className="space-y-3 pb-2">
-      <h2 className="font-display text-3xl font-medium first-letter:uppercase">{format(new Date(day + 'T12:00'), 'EEEE d MMMM', { locale: fr })}</h2>
+      <h2 className="font-display text-3xl font-medium first-letter:uppercase">
+        {format(new Date(day + 'T12:00'), 'EEEE d MMMM', { locale: fr })}
+      </h2>
       {future ? (
         <p className="text-mist">Ce jour est à venir : tu pourras le noter le moment venu.</p>
       ) : (
@@ -355,7 +383,12 @@ function DayActions({
           {inPeriod && day > inPeriod.start_date && inPeriod.end_date !== day && (
             <Action label="Fin des règles ce jour" onClick={() => api.updatePeriod(inPeriod.id, { end_date: day })} />
           )}
-          {!inPeriod && recent && <Action label={`Fin des règles ce jour (commencées le ${formatShort(recent.start_date)})`} onClick={() => api.updatePeriod(recent.id, { end_date: day })} />}
+          {!inPeriod && recent && (
+            <Action
+              label={`Fin des règles ce jour (commencées le ${formatShort(recent.start_date)})`}
+              onClick={() => api.updatePeriod(recent.id, { end_date: day })}
+            />
+          )}
           {ovulation ? (
             <Action label="Retirer l’ovulation" onClick={() => api.deleteOvulation(ovulation.id)} />
           ) : (

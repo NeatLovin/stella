@@ -79,7 +79,12 @@ export function WaterReminder({ sponsor }: { sponsor: string }) {
   return createPortal(
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6" role="dialog" aria-modal aria-label="Rappel : boire de l’eau">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center px-6"
+          role="dialog"
+          aria-modal
+          aria-label="Rappel : boire de l’eau"
+        >
           <motion.button
             type="button"
             aria-label="Plus tard"
@@ -104,7 +109,9 @@ export function WaterReminder({ sponsor }: { sponsor: string }) {
             >
               ×
             </button>
-            <p className="bg-electric/20 px-4 py-1.5 text-[0.7rem] text-glow">Annonce sponsorisée par {sponsor || 'quelqu’un qui t’aime'}</p>
+            <p className="bg-electric/20 px-4 py-1.5 text-[0.7rem] text-glow">
+              Annonce sponsorisée par {sponsor || 'quelqu’un qui t’aime'}
+            </p>
             <div className="px-6 pt-5 pb-6">
               <Glass />
               <p className="font-display mt-4 text-[1.6rem] leading-tight">{message}</p>
