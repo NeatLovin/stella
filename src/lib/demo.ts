@@ -1,5 +1,5 @@
 // Données fictives en mémoire pour développer sans Supabase (npm run demo, mot de passe « demo »).
-import type { Api, Reason, TimelineEvent, WishlistItem } from './api'
+import type { Api, Photo, Reason, TimelineEvent, WishlistItem } from './api'
 import type { Ovulation, Period } from './cycle'
 import { plusDays, todayISO } from './dates'
 
@@ -51,6 +51,7 @@ export function createDemoApi(): Api {
     { id: uid(), name: 'Une bougie', url: null, image_path: null, created_at: new Date().toISOString() },
   ]
   const images = new Map<string, string>()
+  let photos: Photo[] = []
 
   const today = todayISO()
   let periods: Period[] = [
@@ -94,6 +95,15 @@ export function createDemoApi(): Api {
     async setEventImage(id, image_path) {
       const e = timeline.find((t) => t.id === id)
       if (e) e.image_path = image_path
+    },
+    async getPhotos() {
+      return [...photos]
+    },
+    async addPhoto(image_path, caption) {
+      photos = [{ id: uid(), image_path, caption, created_at: new Date().toISOString() }, ...photos]
+    },
+    async deletePhoto(photo) {
+      photos = photos.filter((p) => p.id !== photo.id)
     },
     async getReasons() {
       await wait()

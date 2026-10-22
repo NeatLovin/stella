@@ -34,6 +34,14 @@ create table if not exists public.reasons (
   created_at timestamptz not null default now()
 );
 
+-- Mur de photos (page « Nous »)
+create table if not exists public.photos (
+  id         uuid primary key default gen_random_uuid(),
+  image_path text not null,
+  caption    text,
+  created_at timestamptz not null default now()
+);
+
 -- Wishlist
 create table if not exists public.wishlist_items (
   id         uuid primary key default gen_random_uuid(),
@@ -63,7 +71,7 @@ create table if not exists public.ovulations (
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations']
+  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "authenticated full access" on public.%I', t);

@@ -3,6 +3,7 @@ import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { useSettings, useShowWelcome } from '../App'
 import { Page } from '../components/Page'
+import { PhotoWall } from '../components/PhotoWall'
 import { formatLong, parse } from '../lib/dates'
 
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one)
@@ -36,7 +37,7 @@ export function Home() {
   return (
     <Page>
       <motion.section
-        className="flex min-h-[calc(100dvh-var(--tabbar-h)-6rem)] flex-col justify-center md:min-h-[70dvh]"
+        className="flex min-h-[calc(100dvh-var(--tabbar-h)-9rem)] flex-col justify-center md:min-h-[60dvh]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.2 }}
@@ -73,6 +74,7 @@ export function Home() {
           </button>
         )}
       </motion.section>
+      <PhotoWall />
     </Page>
   )
 }

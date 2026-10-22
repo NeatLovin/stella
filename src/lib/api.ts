@@ -27,6 +27,13 @@ export interface Reason {
   text: string
 }
 
+export interface Photo {
+  id: string
+  image_path: string
+  caption: string | null
+  created_at: string
+}
+
 export interface WishlistItem {
   id: string
   name: string
@@ -48,11 +55,15 @@ export interface Api {
   setEventImage(id: string, image_path: string | null): Promise<void>
   getReasons(): Promise<Reason[]>
 
+  getPhotos(): Promise<Photo[]>
+  addPhoto(image_path: string, caption: string | null): Promise<void>
+  deletePhoto(photo: Photo): Promise<void>
+
   getWishlist(): Promise<WishlistItem[]>
   addWish(input: WishlistInput): Promise<void>
   updateWish(id: string, input: WishlistInput): Promise<void>
   deleteWish(item: WishlistItem): Promise<void>
-  uploadImage(blob: Blob, folder?: 'wishlist' | 'timeline'): Promise<string>
+  uploadImage(blob: Blob, folder?: 'wishlist' | 'timeline' | 'photos'): Promise<string>
   deleteImage(path: string): Promise<void>
   imageUrls(paths: string[]): Promise<Record<string, string>>
 
@@ -112,6 +123,16 @@ function createSupabaseApi(): Api {
     },
     async setEventImage(id, image_path) {
       check(await sb.from('timeline_events').update({ image_path }).eq('id', id))
+    },
+    async getPhotos() {
+      return check(await sb.from('photos').select('*').order('created_at', { ascending: false })) as Photo[]
+    },
+    async addPhoto(image_path, caption) {
+      check(await sb.from('photos').insert({ image_path, caption }))
+    },
+    async deletePhoto(photo) {
+      check(await sb.from('photos').delete().eq('id', photo.id))
+      await sb.storage.from(BUCKET).remove([photo.image_path])
     },
     async getReasons() {
       return check(await sb.from('reasons').select('id, text').order('created_at')) as Reason[]
