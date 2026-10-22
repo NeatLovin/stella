@@ -4,6 +4,7 @@ import { Loading } from './components/Page'
 import { clearWelcomeFlag, hasWelcomeFlag, Welcome } from './components/Welcome'
 import { StarrySky } from './components/StarrySky'
 import { TabBar } from './components/TabBar'
+import { WaterReminder } from './components/WaterReminder'
 import { useLoad } from './hooks/useLoad'
 import { api, configError, type Settings } from './lib/api'
 import { Cycle } from './pages/Cycle'
@@ -40,6 +41,7 @@ function Hub() {
       <WelcomeContext.Provider value={() => setWelcome(true)}>
         <HashRouter>
           <TabBar />
+          <WaterReminder sponsor={settings.his_name} />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/timeline" element={<Timeline />} />
