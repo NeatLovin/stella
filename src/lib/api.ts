@@ -19,6 +19,7 @@ export interface TimelineEvent {
   description: string
   icon: string
   highlight: boolean
+  image_path: string | null
 }
 
 export interface Reason {
@@ -44,13 +45,14 @@ export interface Api {
 
   getSettings(): Promise<Settings>
   getTimeline(): Promise<TimelineEvent[]>
+  setEventImage(id: string, image_path: string | null): Promise<void>
   getReasons(): Promise<Reason[]>
 
   getWishlist(): Promise<WishlistItem[]>
   addWish(input: WishlistInput): Promise<void>
   updateWish(id: string, input: WishlistInput): Promise<void>
   deleteWish(item: WishlistItem): Promise<void>
-  uploadImage(blob: Blob): Promise<string>
+  uploadImage(blob: Blob, folder?: 'wishlist' | 'timeline'): Promise<string>
   deleteImage(path: string): Promise<void>
   imageUrls(paths: string[]): Promise<Record<string, string>>
 
@@ -108,6 +110,9 @@ function createSupabaseApi(): Api {
     async getTimeline() {
       return check(await sb.from('timeline_events').select('*').order('date_start')) as TimelineEvent[]
     },
+    async setEventImage(id, image_path) {
+      check(await sb.from('timeline_events').update({ image_path }).eq('id', id))
+    },
     async getReasons() {
       return check(await sb.from('reasons').select('id, text').order('created_at')) as Reason[]
     },
@@ -125,8 +130,8 @@ function createSupabaseApi(): Api {
       check(await sb.from('wishlist_items').delete().eq('id', item.id))
       if (item.image_path) await sb.storage.from(BUCKET).remove([item.image_path])
     },
-    async uploadImage(blob) {
-      const path = `${crypto.randomUUID()}.jpg`
+    async uploadImage(blob, folder = 'wishlist') {
+      const path = `${folder}/${crypto.randomUUID()}.jpg`
       check(await sb.storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: false }))
       return path
     },

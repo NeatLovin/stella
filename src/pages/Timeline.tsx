@@ -5,6 +5,7 @@ import { ErrorNote, Loading, Page } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api, type TimelineEvent } from '../lib/api'
 import { diffDays, formatRange, formatShort, todayISO } from '../lib/dates'
+import { compressImage } from '../lib/image'
 
 // Positions horizontales (fraction de la largeur) : une constellation irrégulière mais stable
 const XS = [0.22, 0.68, 0.4, 0.78, 0.3, 0.62, 0.2, 0.72, 0.46, 0.8]
@@ -13,17 +14,25 @@ const TOP = 40
 
 export function Timeline() {
   const { data, error, loading, reload } = useLoad(api.getTimeline)
-  const [selected, setSelected] = useState<TimelineEvent | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [urls, setUrls] = useState<Record<string, string>>({})
+  const selected = data?.find((e) => e.id === selectedId) ?? null
+
+  useEffect(() => {
+    const paths = (data ?? []).map((e) => e.image_path).filter((p): p is string => Boolean(p) && !urls[p!])
+    if (paths.length) void api.imageUrls(paths).then((u) => setUrls((prev) => ({ ...prev, ...u })))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
 
   return (
     <Page title="Notre constellation" intro="Chaque étoile est un moment à nous. Touche-en une pour la revoir.">
       {loading && <Loading />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">La constellation attend sa première étoile.</p>}
-      {data && data.length > 0 && <Constellation events={data} onSelect={setSelected} />}
+      {data && data.length > 0 && <Constellation events={data} onSelect={(e) => setSelectedId(e.id)} />}
 
-      <BottomSheet open={Boolean(selected)} onClose={() => setSelected(null)} label={selected?.title ?? ''}>
-        {selected && <EventDetail event={selected} />}
+      <BottomSheet open={Boolean(selected)} onClose={() => setSelectedId(null)} label={selected?.title ?? ''}>
+        {selected && <EventDetail event={selected} src={selected.image_path ? urls[selected.image_path] : undefined} onChanged={reload} />}
       </BottomSheet>
     </Page>
   )
@@ -118,17 +127,68 @@ function Constellation({ events, onSelect }: { events: TimelineEvent[]; onSelect
   )
 }
 
-function EventDetail({ event }: { event: TimelineEvent }) {
+function EventDetail({ event, src, onChanged }: { event: TimelineEvent; src?: string; onChanged: () => Promise<void> }) {
   const ago = diffDays(todayISO(), event.date_start)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const replacePhoto = async (file: File | null) => {
+    setBusy(true)
+    setError(null)
+    try {
+      const path = file ? await api.uploadImage(await compressImage(file), 'timeline') : null
+      await api.setEventImage(event.id, path)
+      if (event.image_path) await api.deleteImage(event.image_path)
+      await onChanged()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <article className="pb-2">
-      <div className="text-5xl" aria-hidden>
-        {event.icon}
-      </div>
+      {event.image_path ? (
+        <div className="-mx-2 mb-5 overflow-hidden rounded-[1.25rem] border border-glow/15 bg-dusk/60">
+          {src ? <img src={src} alt={event.title} className="max-h-[48dvh] w-full object-cover" /> : <div className="aspect-[4/3]" />}
+        </div>
+      ) : (
+        <div className="text-5xl" aria-hidden>
+          {event.icon}
+        </div>
+      )}
       <p className="mt-4 text-sm text-glow">{formatRange(event.date_start, event.date_end)}</p>
       <h2 className="font-display mt-1 text-[2rem] leading-tight font-medium">{event.title}</h2>
       {event.description && <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-starlight/90">{event.description}</p>}
       {ago > 0 && <p className="mt-6 text-sm text-mist">Il y a {ago} jours</p>}
+
+      <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-glow/10 pt-4 text-sm">
+        <label className={`cursor-pointer text-glow ${busy ? 'pointer-events-none opacity-50' : ''}`}>
+          {busy ? 'Envoi…' : event.image_path ? 'Changer la photo' : 'Ajouter une photo'}
+          <input
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            disabled={busy}
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) void replacePhoto(f)
+              e.target.value = ''
+            }}
+          />
+        </label>
+        {event.image_path && (
+          <button type="button" className="text-mist" disabled={busy} onClick={() => void replacePhoto(null)}>
+            Retirer la photo
+          </button>
+        )}
+      </div>
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-rose">
+          Envoi impossible : {error}
+        </p>
+      )}
     </article>
   )
 }

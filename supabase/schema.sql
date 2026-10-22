@@ -19,9 +19,13 @@ create table if not exists public.timeline_events (
   description text not null default '',
   icon        text not null default '✨',
   highlight   boolean not null default false,
+  image_path  text,
   created_at  timestamptz not null default now(),
   check (date_end is null or date_end >= date_start)
 );
+
+-- Migration : photo par souvenir (sans effet si la colonne existe déjà)
+alter table public.timeline_events add column if not exists image_path text;
 
 -- Bocal à raisons
 create table if not exists public.reasons (

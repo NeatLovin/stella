@@ -46,10 +46,12 @@ body {
 }
 
 /* Empêche le zoom iOS sur focus : jamais moins de 16 px dans les champs */
+button {
+  font: inherit;
+}
 input,
 textarea,
-select,
-button {
+select {
   font: inherit;
   font-size: max(16px, 1em);
 }

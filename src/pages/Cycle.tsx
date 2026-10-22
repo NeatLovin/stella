@@ -197,7 +197,7 @@ function Ring({ state }: { state: Extract<CycleState, { status: 'ok' }> }) {
           )}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-          <p className="font-display text-[1.9rem] leading-tight font-medium" style={{ color: PHASE_COLOR[phase] }}>
+          <p className="font-display max-w-[11rem] text-[1.6rem] leading-[1.05] font-medium" style={{ color: PHASE_COLOR[phase] }}>
             {PHASE_LABEL[phase]}
           </p>
           <p className="mt-1 text-sm text-mist">Jour {cycleDay}</p>

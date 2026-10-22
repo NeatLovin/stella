@@ -17,7 +17,14 @@ export function createDemoApi(): Api {
     ['2026-06-02', '2026-06-12', 'Des vacances', 'Un souvenir qui dure plusieurs jours.', '🏖️', false],
     ['2026-06-20', null, 'Le grand jour', 'Une étoile mise en avant.', '💫', true],
     ['2026-07-04', null, 'Une fête', 'Texte de démonstration.', '🎂', false],
-    ['2026-07-18', null, 'Un premier date', 'Texte de démonstration un peu plus long pour tester le retour à la ligne dans la carte.', '♨️', false],
+    [
+      '2026-07-18',
+      null,
+      'Un premier date',
+      'Texte de démonstration un peu plus long pour tester le retour à la ligne dans la carte.',
+      '♨️',
+      false,
+    ],
     ['2026-08-09', null, 'Une sortie', 'Texte de démonstration.', '🎡', false],
     ['2026-09-01', null, 'Une victoire', 'Texte de démonstration.', '🚗', false],
     ['2026-09-21', null, 'Un nouveau venu', 'Texte de démonstration.', '🧸', false],
@@ -29,6 +36,7 @@ export function createDemoApi(): Api {
     description,
     icon,
     highlight,
+    image_path: null,
   })) as TimelineEvent[]
 
   const reasons: Reason[] = [
@@ -75,12 +83,17 @@ export function createDemoApi(): Api {
         her_name: 'Elle',
         his_name: 'Lui',
         couple_start: '2026-06-20',
-        welcome: 'Premier paragraphe du mot d’accueil.\n\nDeuxième paragraphe, un peu plus long pour voir comment le texte respire sur plusieurs lignes.\n\nTroisième paragraphe.',
+        welcome:
+          'Premier paragraphe du mot d’accueil.\n\nDeuxième paragraphe, un peu plus long pour voir comment le texte respire sur plusieurs lignes.\n\nTroisième paragraphe.',
       }
     },
     async getTimeline() {
       await wait()
-      return timeline
+      return timeline.map((e) => ({ ...e }))
+    },
+    async setEventImage(id, image_path) {
+      const e = timeline.find((t) => t.id === id)
+      if (e) e.image_path = image_path
     },
     async getReasons() {
       await wait()
@@ -99,8 +112,8 @@ export function createDemoApi(): Api {
     async deleteWish(item) {
       wishlist = wishlist.filter((w) => w.id !== item.id)
     },
-    async uploadImage(blob) {
-      const path = `${uid()}.jpg`
+    async uploadImage(blob, folder = 'wishlist') {
+      const path = `${folder}/${uid()}.jpg`
       images.set(path, URL.createObjectURL(blob))
       return path
     },
