@@ -24,8 +24,9 @@ create table if not exists public.timeline_events (
   check (date_end is null or date_end >= date_start)
 );
 
--- Migration : photo par souvenir (sans effet si la colonne existe déjà)
+-- Migrations : photo et chanson par souvenir (sans effet si les colonnes existent déjà)
 alter table public.timeline_events add column if not exists image_path text;
+alter table public.timeline_events add column if not exists song_url text;
 
 -- Bocal à raisons
 create table if not exists public.reasons (

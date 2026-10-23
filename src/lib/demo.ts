@@ -37,6 +37,7 @@ export function createDemoApi(): Api {
     icon,
     highlight,
     image_path: null,
+    song_url: null,
   })) as TimelineEvent[]
 
   const reasons: Reason[] = [
@@ -91,6 +92,10 @@ export function createDemoApi(): Api {
     async getTimeline() {
       await wait()
       return timeline.map((e) => ({ ...e }))
+    },
+    async setEventSong(id, song_url) {
+      const e = timeline.find((t) => t.id === id)
+      if (e) e.song_url = song_url
     },
     async setEventImage(id, image_path) {
       const e = timeline.find((t) => t.id === id)

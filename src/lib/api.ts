@@ -20,6 +20,8 @@ export interface TimelineEvent {
   icon: string
   highlight: boolean
   image_path: string | null
+  /** Lien Spotify (morceau, album ou playlist) */
+  song_url: string | null
 }
 
 export interface Reason {
@@ -53,6 +55,7 @@ export interface Api {
   getSettings(): Promise<Settings>
   getTimeline(): Promise<TimelineEvent[]>
   setEventImage(id: string, image_path: string | null): Promise<void>
+  setEventSong(id: string, song_url: string | null): Promise<void>
   getReasons(): Promise<Reason[]>
 
   getPhotos(): Promise<Photo[]>
@@ -123,6 +126,9 @@ function createSupabaseApi(): Api {
     },
     async setEventImage(id, image_path) {
       check(await sb.from('timeline_events').update({ image_path }).eq('id', id))
+    },
+    async setEventSong(id, song_url) {
+      check(await sb.from('timeline_events').update({ song_url }).eq('id', id))
     },
     async getPhotos() {
       return check(await sb.from('photos').select('*').order('created_at', { ascending: false })) as Photo[]
