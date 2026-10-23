@@ -188,7 +188,19 @@ function EventDetail({ event, src, onChanged }: { event: TimelineEvent; src?: st
       )}
       <p className="mt-4 text-sm text-glow">{formatRange(event.date_start, event.date_end)}</p>
       <h2 className="font-display mt-1 text-[2rem] leading-tight font-medium">{event.title}</h2>
-      {event.description && <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-starlight/90">{event.description}</p>}
+      {event.description && (
+        <div className="mt-4 max-w-[52ch] space-y-3 text-lg leading-relaxed text-starlight/90">
+          {event.description
+            .split(/\n\s*\n/)
+            .map((p) => p.trim())
+            .filter(Boolean)
+            .map((p, i) => (
+              <p key={i} className="whitespace-pre-line">
+                {p}
+              </p>
+            ))}
+        </div>
+      )}
       {ago > 0 && <p className="mt-6 text-sm text-mist">Il y a {ago} jours</p>}
 
       <div className="mt-6 flex flex-wrap items-center gap-4 border-t border-glow/10 pt-4 text-sm">
