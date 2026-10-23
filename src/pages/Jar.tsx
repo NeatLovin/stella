@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
-import { ErrorNote, Loading, Page } from '../components/Page'
+import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api, type Reason } from '../lib/api'
 import { drawFromBag, markSeen } from '../lib/bag'
@@ -52,7 +52,7 @@ export function Jar() {
 
   return (
     <Page title="Le bocal" intro="Une raison par jour. Et d’autres, quand tu en as besoin.">
-      {loading && <Loading />}
+      {loading && <Skeleton variant="jar" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">Le bocal attend ses premières raisons.</p>}
       {data && data.length > 0 && <JarContent reasons={data} />}

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { Loading } from './components/Page'
 import { clearWelcomeFlag, hasWelcomeFlag, Welcome } from './components/Welcome'
 import { StarrySky } from './components/StarrySky'
@@ -42,17 +43,53 @@ function Hub() {
         <HashRouter>
           <TabBar />
           <WaterReminder sponsor={settings.his_name} />
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/timeline" element={<Timeline />} />
-            <Route path="/bocal" element={<Jar />} />
-            <Route path="/wishlist" element={<Wishlist />} />
-            <Route path="/cycle" element={<Cycle />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          <AnimatedRoutes />
         </HashRouter>
       </WelcomeContext.Provider>
     </SettingsContext.Provider>
+  )
+}
+
+const ORDER = ['/', '/timeline', '/bocal', '/wishlist', '/cycle']
+
+/** Transition douce entre onglets : fondu + léger glissement dans le sens de la navigation. */
+function AnimatedRoutes() {
+  const location = useLocation()
+  const reduced = useReducedMotion()
+  const [prev, setPrev] = useState(location.pathname)
+  const [dir, setDir] = useState(0)
+  if (prev !== location.pathname) {
+    setDir(Math.sign(ORDER.indexOf(location.pathname) - ORDER.indexOf(prev)))
+    setPrev(location.pathname)
+  }
+  const shift = reduced ? 0 : 24
+
+  return (
+    <AnimatePresence mode="wait" initial={false} custom={dir}>
+      <motion.div
+        key={location.pathname}
+        custom={dir}
+        variants={{
+          enter: (d: number) => ({ opacity: 0, x: d * shift, filter: reduced ? 'none' : 'blur(4px)' }),
+          center: { opacity: 1, x: 0, filter: 'blur(0px)' },
+          exit: (d: number) => ({ opacity: 0, x: -d * shift, filter: reduced ? 'none' : 'blur(4px)' }),
+        }}
+        initial="enter"
+        animate="center"
+        exit="exit"
+        transition={{ duration: reduced ? 0.01 : 0.28, ease: [0.22, 1, 0.36, 1] }}
+        onAnimationStart={(def) => def === 'center' && window.scrollTo({ top: 0 })}
+      >
+        <Routes location={location}>
+          <Route path="/" element={<Home />} />
+          <Route path="/timeline" element={<Timeline />} />
+          <Route path="/bocal" element={<Jar />} />
+          <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/cycle" element={<Cycle />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </motion.div>
+    </AnimatePresence>
   )
 }
 

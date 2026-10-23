@@ -19,7 +19,8 @@
 
 :root {
   color-scheme: dark;
-  --tabbar-h: 4.25rem;
+  --tabbar-h: 3.9rem;
+  --tabbar-gap: max(0.75rem, env(safe-area-inset-bottom));
 }
 
 html {
@@ -69,7 +70,7 @@ select {
 }
 
 .safe-bottom {
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 1.5rem);
+  padding-bottom: calc(var(--tabbar-h) + var(--tabbar-gap) + 2rem);
 }
 
 .safe-top {
@@ -77,12 +78,34 @@ select {
 }
 
 @media (min-width: 768px) {
-  .safe-bottom {
-    padding-bottom: 3rem;
-  }
   .safe-top {
-    padding-top: calc(var(--tabbar-h) + 2rem);
+    padding-top: 3.5rem;
   }
+}
+
+/* Barre d'onglets flottante */
+.tabbar-dock {
+  bottom: var(--tabbar-gap);
+}
+
+/* Verre dépoli : flou + saturation, liseré lumineux en haut, ombre douce */
+.glass {
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02)), rgb(9 14 44 / 0.78);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.2),
+    0 12px 40px rgb(0 0 0 / 0.45),
+    0 0 0 0.5px rgb(125 162 255 / 0.15);
+}
+
+.tab-bubble {
+  background: radial-gradient(120% 140% at 50% 0%, rgb(125 162 255 / 0.32), rgb(46 91 255 / 0.12) 60%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    0 0 18px rgb(46 91 255 / 0.35);
 }
 
 .field {
@@ -146,5 +169,70 @@ select {
   *::after {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Halo qui suit la souris / le doigt sur la constellation */
+.star-halo {
+  background: radial-gradient(circle 150px at var(--hx, 50%) var(--hy, 50%), rgb(125 162 255 / 0.14), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+[data-halo='on'] > .star-halo {
+  opacity: 1;
+}
+@media (hover: none) {
+  [data-halo='on'] > .star-halo {
+    animation: halo-fade 1.4s forwards;
+  }
+}
+@keyframes halo-fade {
+  0%,
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* Grain très léger sur le ciel (au-dessus du canvas, sous le contenu) */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -9;
+  pointer-events: none;
+  opacity: 0.07;
+  mix-blend-mode: soft-light;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+
+/* Silhouettes de chargement : reflet qui traverse lentement */
+.shimmer {
+  background: linear-gradient(100deg, rgb(125 162 255 / 0.07) 30%, rgb(170 195 255 / 0.18) 50%, rgb(125 162 255 / 0.07) 70%);
+  background-size: 250% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+.shimmer-ring {
+  border: 14px solid transparent;
+  background:
+    linear-gradient(var(--color-night), var(--color-night)) padding-box,
+    linear-gradient(100deg, rgb(125 162 255 / 0.08) 30%, rgb(170 195 255 / 0.22) 50%, rgb(125 162 255 / 0.08) 70%) border-box;
+  background-size: 100% 100%, 250% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
   }
 }

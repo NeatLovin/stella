@@ -3,7 +3,7 @@ import { fr } from 'date-fns/locale'
 import { useMemo, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { IconChevron } from '../components/icons'
-import { ErrorNote, Loading, Page } from '../components/Page'
+import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api } from '../lib/api'
 import {
@@ -38,7 +38,7 @@ export function Cycle() {
 
   return (
     <Page title="Cycle">
-      {loading && <Loading />}
+      {loading && <Skeleton variant="cycle" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && <CycleContent periods={data.periods} ovulations={data.ovulations} today={today} reload={reload} />}
     </Page>

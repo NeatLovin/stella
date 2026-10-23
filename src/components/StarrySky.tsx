@@ -81,36 +81,40 @@ export function StarrySky() {
       }
       if (shooting) {
         const { x, y, vx, vy, life } = shooting
-        const grad = ctx.createLinearGradient(x, y, x - vx * 18, y - vy * 18)
+        const tail = 0.6 // longueur de la traînée, en secondes de trajet
+        const grad = ctx.createLinearGradient(x, y, x - vx * tail, y - vy * tail)
         grad.addColorStop(0, `rgba(244,246,255,${life})`)
         grad.addColorStop(1, 'rgba(125,162,255,0)')
         ctx.strokeStyle = grad
         ctx.lineWidth = 1.4
         ctx.beginPath()
         ctx.moveTo(x, y)
-        ctx.lineTo(x - vx * 18, y - vy * 18)
+        ctx.lineTo(x - vx * tail, y - vy * tail)
         ctx.stroke()
       }
     }
 
+    // Fréquence native de l'écran (60 Hz sur iPhone/Safari, jusqu'à 120+ Hz sur PC).
+    // Les mouvements sont calculés au temps écoulé : même vitesse quel que soit l'écran.
+    // En mode économie d'énergie, iOS ralentit lui-même la cadence.
     const loop = (t: number) => {
       raf = requestAnimationFrame(loop)
-      if (t - last < 33) return // ~30 fps, économise la batterie
+      const dt = Math.min(0.05, last ? (t - last) / 1000 : 0) // secondes, plafonné après une pause
       last = t
       if (!shooting && t > nextShot) {
         const angle = Math.PI / 5 + Math.random() * 0.3
         shooting = {
           x: Math.random() * w * 0.7 + w * 0.2,
           y: Math.random() * h * 0.35,
-          vx: -Math.cos(angle) * 9,
-          vy: Math.sin(angle) * 9,
+          vx: -Math.cos(angle) * 270, // px / s
+          vy: Math.sin(angle) * 270,
           life: 1,
         }
       }
       if (shooting) {
-        shooting.x += shooting.vx
-        shooting.y += shooting.vy
-        shooting.life -= 0.035
+        shooting.x += shooting.vx * dt
+        shooting.y += shooting.vy * dt
+        shooting.life -= 1.05 * dt
         if (shooting.life <= 0) {
           shooting = null
           nextShot = t + 9000 + Math.random() * 12000
@@ -121,6 +125,7 @@ export function StarrySky() {
 
     const onVisibility = () => {
       cancelAnimationFrame(raf)
+      last = 0
       if (!document.hidden && !reduced) raf = requestAnimationFrame(loop)
     }
 

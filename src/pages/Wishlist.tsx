@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { IconExternal, IconGift, IconImage, IconPlus } from '../components/icons'
-import { ErrorNote, Loading, Page } from '../components/Page'
+import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { useImageUrls } from '../hooks/useImageUrls'
 import { api, type WishlistItem } from '../lib/api'
@@ -27,7 +27,7 @@ export function Wishlist() {
         Ajouter une envie
       </button>
 
-      {loading && <Loading />}
+      {loading && <Skeleton variant="cards" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">Ta wishlist est vide. Ajoute ta première envie avec le bouton ci-dessus.</p>}
 

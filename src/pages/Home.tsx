@@ -42,7 +42,7 @@ export function Home() {
         animate={{ opacity: 1 }}
         transition={{ duration: 1.2 }}
       >
-        <h1 className="font-display glow-text text-[3.4rem] leading-[0.95] font-medium tracking-tight sm:text-7xl">
+        <h1 className="font-display glow-text text-[clamp(3.1rem,13.5vw,4.75rem)] leading-[0.95] font-medium tracking-tight">
           {her_name}
           <span className="block pl-10 text-glow italic">&amp; {his_name}</span>
         </h1>
@@ -56,11 +56,11 @@ export function Home() {
             {rows.map(({ n, unit, live }, i) => (
               <div key={i} className="contents">
                 <span
-                  className={`font-display text-right text-7xl leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}
+                  className={`font-display text-right text-[clamp(3.6rem,16.5vw,5rem)] leading-none font-medium tabular-nums lining-nums ${live ? 'text-glow' : ''}`}
                 >
                   {n}
                 </span>
-                <span className="font-display text-2xl text-mist italic">{unit}</span>
+                <span className="font-display text-[clamp(1.35rem,6vw,1.7rem)] text-mist italic">{unit}</span>
               </div>
             ))}
           </div>

@@ -1,8 +1,8 @@
 import { motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { Lightbox } from '../components/Lightbox'
-import { ErrorNote, Loading, Page } from '../components/Page'
+import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { useImageUrls } from '../hooks/useImageUrls'
 import { api, type TimelineEvent } from '../lib/api'
@@ -22,7 +22,7 @@ export function Timeline() {
 
   return (
     <Page title="Notre constellation" intro="Chaque étoile est un moment à nous. Touche-en une pour la revoir.">
-      {loading && <Loading />}
+      {loading && <Skeleton variant="timeline" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">La constellation attend sa première étoile.</p>}
       {data && data.length > 0 && <Constellation events={data} urls={urls} onSelect={(e) => setSelectedId(e.id)} />}
@@ -48,6 +48,27 @@ function Constellation({
   const height = TOP * 2 + (sorted.length - 1) * STEP
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
+  const [burst, setBurst] = useState<string | null>(null)
+
+  // L'étoile touchée s'illumine, puis sa fiche s'ouvre
+  const open = (e: TimelineEvent) => {
+    setBurst(e.id)
+    window.setTimeout(() => onSelect(e), 220)
+    window.setTimeout(() => setBurst(null), 700)
+  }
+
+  // Halo qui suit la souris ou le doigt (variables CSS, sans re-rendu)
+  const moveHalo = (ev: ReactPointerEvent<HTMLDivElement>) => {
+    const el = ref.current
+    if (!el) return
+    const r = el.getBoundingClientRect()
+    el.style.setProperty('--hx', `${ev.clientX - r.left}px`)
+    el.style.setProperty('--hy', `${ev.clientY - r.top}px`)
+    el.dataset.halo = 'on'
+  }
+  const hideHalo = () => {
+    if (ref.current) ref.current.dataset.halo = 'off'
+  }
 
   useEffect(() => {
     const el = ref.current
@@ -58,7 +79,16 @@ function Constellation({
   }, [])
 
   return (
-    <div ref={ref} className="relative" style={{ height, containerType: 'inline-size' }}>
+    <div
+      ref={ref}
+      className="relative"
+      style={{ height, containerType: 'inline-size' }}
+      onPointerMove={moveHalo}
+      onPointerDown={moveHalo}
+      onPointerLeave={hideHalo}
+      onPointerCancel={hideHalo}
+    >
+      <div className="star-halo pointer-events-none absolute -inset-x-5 inset-y-0" aria-hidden />
       {width > 0 && (
         <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 ${width} ${height}`} aria-hidden>
           {points.slice(1).map((p, i) => {
@@ -101,7 +131,7 @@ function Constellation({
             >
               <button
                 type="button"
-                onClick={() => onSelect(e)}
+                onClick={() => open(e)}
                 className={`group absolute top-0 flex -translate-y-1/2 items-center gap-3 ${
                   labelRight ? '-left-[22px] flex-row text-left' : '-right-[22px] flex-row-reverse text-right'
                 }`}
@@ -114,6 +144,15 @@ function Constellation({
                     }`}
                   />
                   <span className={`relative rounded-full ${e.highlight ? 'h-3.5 w-3.5 bg-gold' : 'h-2.5 w-2.5 bg-starlight'}`} />
+                  {burst === e.id && (
+                    <motion.span
+                      className={`absolute h-3 w-3 rounded-full ${e.highlight ? 'bg-gold' : 'bg-glow'}`}
+                      initial={{ scale: 1, opacity: 0.9 }}
+                      animate={{ scale: 9, opacity: 0 }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                      aria-hidden
+                    />
+                  )}
                 </span>
                 <span
                   className={`flex items-center gap-2.5 ${labelRight ? 'flex-row' : 'flex-row-reverse'}`}
