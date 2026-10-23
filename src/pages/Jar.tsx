@@ -1,9 +1,28 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ErrorNote, Loading, Page } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api, type Reason } from '../lib/api'
+import { drawFromBag, markSeen } from '../lib/bag'
 import { diffDays, todayISO } from '../lib/dates'
+
+// Tirages déjà faits sur ce téléphone, conservés entre les visites
+const BAG_KEY = 'stella.jar.seen'
+const readSeen = (): string[] => {
+  try {
+    const v = JSON.parse(localStorage.getItem(BAG_KEY) ?? '[]')
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
+  } catch {
+    return []
+  }
+}
+const writeSeen = (seen: string[]) => {
+  try {
+    localStorage.setItem(BAG_KEY, JSON.stringify(seen))
+  } catch {
+    /* stockage indisponible : le sac repart de zéro à la prochaine visite */
+  }
+}
 
 /** Générateur pseudo-aléatoire déterministe (mulberry32). */
 function rng(seed: number) {
@@ -43,16 +62,19 @@ export function Jar() {
 
 function JarContent({ reasons }: { reasons: Reason[] }) {
   const today = useMemo(() => reasonOfTheDay(reasons), [reasons])
+  const ids = useMemo(() => reasons.map((r) => r.id), [reasons])
   const [current, setCurrent] = useState<Reason>(today)
-  const recent = useRef<string[]>([today.id])
+
+  // La raison du jour compte comme déjà lue
+  useEffect(() => {
+    writeSeen(markSeen(ids, readSeen(), today.id))
+  }, [ids, today.id])
 
   const draw = () => {
     if (reasons.length < 2) return
-    const avoid = recent.current.slice(-Math.min(5, reasons.length - 1))
-    const pool = reasons.filter((r) => !avoid.includes(r.id))
-    const next = pool[Math.floor(Math.random() * pool.length)]
-    recent.current = [...recent.current, next.id]
-    setCurrent(next)
+    const { id, seen } = drawFromBag(ids, readSeen(), current.id)
+    writeSeen(seen)
+    setCurrent(reasons.find((r) => r.id === id)!)
   }
 
   const isToday = current.id === today.id
