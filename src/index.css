@@ -236,3 +236,13 @@ body::before {
     opacity: 0;
   }
 }
+
+/* Halo plein écran qui suit la souris (PC) */
+.cursor-glow {
+  background: radial-gradient(circle 260px at var(--cx, 50%) var(--cy, 50%), rgb(125 162 255 / 0.14), rgb(46 91 255 / 0.05) 45%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.cursor-glow[data-on='true'] {
+  opacity: 1;
+}

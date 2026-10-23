@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
+import { CursorGlow } from '../components/CursorGlow'
 import { Lightbox } from '../components/Lightbox'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
@@ -22,6 +23,7 @@ export function Timeline() {
 
   return (
     <Page title="Notre constellation" intro="Chaque étoile est un moment à nous. Touche-en une pour la revoir.">
+      <CursorGlow />
       {loading && <Skeleton variant="timeline" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">La constellation attend sa première étoile.</p>}
@@ -60,7 +62,8 @@ function Constellation({
   // Halo qui suit la souris ou le doigt (variables CSS, sans re-rendu)
   const moveHalo = (ev: ReactPointerEvent<HTMLDivElement>) => {
     const el = ref.current
-    if (!el) return
+    // À la souris, c'est le halo plein écran (CursorGlow) qui prend le relais
+    if (!el || ev.pointerType === 'mouse') return
     const r = el.getBoundingClientRect()
     el.style.setProperty('--hx', `${ev.clientX - r.left}px`)
     el.style.setProperty('--hy', `${ev.clientY - r.top}px`)
