@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useDialog } from '../hooks/useDialog'
 import { createPortal } from 'react-dom'
 import { todayISO } from '../lib/dates'
 
@@ -76,11 +77,16 @@ export function WaterReminder({ sponsor }: { sponsor: string }) {
     close(AFTER_DRINK)
   }
 
+  const box = useRef<HTMLDivElement>(null)
+  useDialog(open, box, () => close(AFTER_SNOOZE))
+
   return createPortal(
     <AnimatePresence>
       {open && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center px-6"
+          ref={box}
+          tabIndex={-1}
+          className="fixed inset-0 z-[60] flex items-center justify-center px-6 outline-none"
           role="dialog"
           aria-modal
           aria-label="Rappel : boire de l’eau"
@@ -88,6 +94,7 @@ export function WaterReminder({ sponsor }: { sponsor: string }) {
           <motion.button
             type="button"
             aria-label="Plus tard"
+            tabIndex={-1}
             className="absolute inset-0 bg-night/60 backdrop-blur-sm"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

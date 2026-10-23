@@ -42,13 +42,15 @@ export function Login() {
           <path fill="currentColor" d="M12 2c.9 5.8 4.2 9.1 10 10-5.8.9-9.1 4.2-10 10-.9-5.8-4.2-9.1-10-10 5.8-.9 9.1-4.2 10-10Z" />
         </motion.svg>
 
-        <label htmlFor="password" className="font-display mb-5 text-3xl italic">
-          Pour toi seulement
+        <h1 className="font-display mb-5 text-3xl italic">Pour toi seulement</h1>
+        <label htmlFor="password" className="sr-only">
+          Mot de passe
         </label>
         <input
           id="password"
           type="password"
           autoComplete="current-password"
+          autoFocus
           className="field text-center tracking-widest"
           placeholder="Mot de passe"
           value={password}

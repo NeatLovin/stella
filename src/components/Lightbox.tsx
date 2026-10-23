@@ -1,5 +1,6 @@
 import { AnimatePresence, motion, type PanInfo } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useDialog } from '../hooks/useDialog'
 import { createPortal } from 'react-dom'
 import { IconChevron } from './icons'
 
@@ -41,7 +42,6 @@ export function Lightbox({ images, index, onIndexChange, onClose }: Props) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
       if (e.key === 'ArrowRight') go(1)
       if (e.key === 'ArrowLeft') go(-1)
     }
@@ -60,12 +60,16 @@ export function Lightbox({ images, index, onIndexChange, onClose }: Props) {
   }
 
   const image = open ? images[index!] : null
+  const root = useRef<HTMLDivElement>(null)
+  useDialog(open, root, onClose)
 
   return createPortal(
     <AnimatePresence>
       {open && image && (
         <motion.div
-          className="fixed inset-0 z-[70] touch-none overflow-hidden bg-black select-none"
+          ref={root}
+          tabIndex={-1}
+          className="fixed inset-0 z-[70] outline-none touch-none overflow-hidden bg-black select-none"
           role="dialog"
           aria-modal
           aria-label={image.alt || 'Photo en plein écran'}

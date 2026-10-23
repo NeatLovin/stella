@@ -135,7 +135,6 @@ function Constellation({
                 className={`group absolute top-0 flex -translate-y-1/2 items-center gap-3 ${
                   labelRight ? '-left-[22px] flex-row text-left' : '-right-[22px] flex-row-reverse text-right'
                 }`}
-                aria-label={`${e.title}, ${formatRange(e.date_start, e.date_end)}`}
               >
                 <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
                   <span
@@ -165,7 +164,9 @@ function Constellation({
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="font-display block text-[1.2rem] leading-[1.1] font-medium text-starlight">
-                      <span className="mr-1.5 text-[0.95rem]">{e.icon}</span>
+                      <span className="mr-1.5 text-[0.95rem]" aria-hidden>
+                        {e.icon}
+                      </span>
                       {e.title}
                     </span>
                     <span className="mt-1 block text-xs text-mist/80">{formatShort(e.date_start)}</span>

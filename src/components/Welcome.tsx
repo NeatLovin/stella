@@ -36,8 +36,9 @@ export function Welcome({ text, onDone }: Props) {
         {paragraphs.map((p, i) => {
           const first = i === 0
           const signature = i === paragraphs.length - 1 && p.startsWith('—')
+          const Tag = first ? motion.h1 : motion.p // le premier paragraphe (« Sarah, ») sert de titre
           return (
-            <motion.p
+            <Tag
               key={i}
               {...fade(i)}
               className={
@@ -49,7 +50,7 @@ export function Welcome({ text, onDone }: Props) {
               }
             >
               {p}
-            </motion.p>
+            </Tag>
           )
         })}
       </article>

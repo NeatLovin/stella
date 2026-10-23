@@ -1,7 +1,7 @@
 import { differenceInCalendarDays, intervalToDuration } from 'date-fns'
 import { motion } from 'motion/react'
 import { useEffect, useState } from 'react'
-import { useSettings, useShowWelcome } from '../App'
+import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
 import { formatLong, parse } from '../lib/dates'

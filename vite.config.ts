@@ -9,6 +9,20 @@ export default defineConfig(({ mode }) => {
   return {
     base: env.VITE_BASE || '/',
     plugins: [react(), tailwindcss()],
+    build: {
+      rollupOptions: {
+        output: {
+          // Bibliothèques dans des fichiers séparés : mises en cache, pas retéléchargées à chaque mise à jour du site
+          manualChunks(id: string) {
+            if (!id.includes('node_modules')) return undefined
+            if (/[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'react'
+            if (id.includes('@supabase')) return 'supabase'
+            if (/[\\/](motion|framer-motion|motion-dom|motion-utils)[\\/]/.test(id)) return 'motion'
+            return undefined
+          },
+        },
+      },
+    },
     test: {
       environment: 'node',
     },
