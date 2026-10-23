@@ -25,7 +25,7 @@ export function Timeline() {
       {loading && <Loading />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">La constellation attend sa première étoile.</p>}
-      {data && data.length > 0 && <Constellation events={data} onSelect={(e) => setSelectedId(e.id)} />}
+      {data && data.length > 0 && <Constellation events={data} urls={urls} onSelect={(e) => setSelectedId(e.id)} />}
 
       <BottomSheet open={Boolean(selected)} onClose={() => setSelectedId(null)} label={selected?.title ?? ''}>
         {selected && <EventDetail event={selected} src={selected.image_path ? urls[selected.image_path] : undefined} onChanged={reload} />}
@@ -34,7 +34,15 @@ export function Timeline() {
   )
 }
 
-function Constellation({ events, onSelect }: { events: TimelineEvent[]; onSelect: (e: TimelineEvent) => void }) {
+function Constellation({
+  events,
+  urls,
+  onSelect,
+}: {
+  events: TimelineEvent[]
+  urls: Record<string, string>
+  onSelect: (e: TimelineEvent) => void
+}) {
   const sorted = [...events].sort((a, b) => a.date_start.localeCompare(b.date_start))
   const points = sorted.map((e, i) => ({ e, x: XS[i % XS.length], y: TOP + i * STEP }))
   const height = TOP * 2 + (sorted.length - 1) * STEP
@@ -107,12 +115,22 @@ function Constellation({ events, onSelect }: { events: TimelineEvent[]; onSelect
                   />
                   <span className={`relative rounded-full ${e.highlight ? 'h-3.5 w-3.5 bg-gold' : 'h-2.5 w-2.5 bg-starlight'}`} />
                 </span>
-                <span className="leading-tight" style={{ width: `min(14rem, calc(${(labelRight ? 1 - x : x) * 100}cqw - 30px))` }}>
-                  <span className="block text-[0.95rem] text-starlight">
-                    <span className="mr-1.5">{e.icon}</span>
-                    {e.title}
+                <span
+                  className={`flex items-center gap-2.5 ${labelRight ? 'flex-row' : 'flex-row-reverse'}`}
+                  style={{ width: `min(15rem, calc(${(labelRight ? 1 - x : x) * 100}cqw - 30px))` }}
+                >
+                  {e.image_path && (
+                    <span className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-dusk ring-1 ring-starlight/25" aria-hidden>
+                      {urls[e.image_path] && <img src={urls[e.image_path]} alt="" loading="lazy" className="h-full w-full object-cover" />}
+                    </span>
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="font-display block text-[1.2rem] leading-[1.1] font-medium text-starlight">
+                      <span className="mr-1.5 text-[0.95rem]">{e.icon}</span>
+                      {e.title}
+                    </span>
+                    <span className="mt-1 block text-xs text-mist/80">{formatShort(e.date_start)}</span>
                   </span>
-                  <span className="mt-0.5 block text-xs text-mist/80">{formatShort(e.date_start)}</span>
                 </span>
               </button>
             </motion.li>
