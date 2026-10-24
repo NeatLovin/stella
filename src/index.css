@@ -323,3 +323,10 @@ body::before {
     animation: none;
   }
 }
+
+/* Viseur du stand de tir (PC) */
+@media (hover: hover) and (pointer: fine) {
+  .crosshair {
+    cursor: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36' viewBox='0 0 36 36' fill='none'%3E%3Ccircle cx='18' cy='18' r='11' stroke='%23070B24' stroke-width='4'/%3E%3Ccircle cx='18' cy='18' r='11' stroke='%23FF6B9A' stroke-width='2'/%3E%3Cpath d='M18 2v9M18 25v9M2 18h9M25 18h9' stroke='%23070B24' stroke-width='4'/%3E%3Cpath d='M18 2v9M18 25v9M2 18h9M25 18h9' stroke='%23FF6B9A' stroke-width='2'/%3E%3Ccircle cx='18' cy='18' r='1.6' fill='%23FF6B9A'/%3E%3C/svg%3E") 18 18, crosshair;
+  }
+}

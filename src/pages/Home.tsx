@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
-import { DenyLogo } from '../components/DenyLogo'
-import { DenyRun, readBest } from '../components/DenyRun'
+import { Games } from '../components/Games'
 import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery'
 import { formatLong, parse } from '../lib/dates'
 
@@ -16,8 +15,6 @@ export function Home() {
   const showWelcome = useShowWelcome()
   const desktop = useMediaQuery(DESKTOP)
   const [now, setNow] = useState(() => new Date())
-  const [playing, setPlaying] = useState(false)
-  const [best, setBest] = useState(readBest)
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -91,19 +88,7 @@ export function Home() {
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setPlaying(true)}
-            className="group mt-8 flex items-center gap-4 self-start rounded-full py-1 pr-5 pl-1 text-left transition-colors hover:bg-white/5"
-          >
-            <span className="relative flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-glow/30 bg-[radial-gradient(circle_at_50%_40%,#18225a,#0e1640_70%)] shadow-[0_0_28px_rgba(46,91,255,.25)] transition-transform group-hover:-translate-y-0.5">
-              <DenyLogo className="h-12" />
-            </span>
-            <span>
-              <span className="block font-display text-xl leading-tight">Jouer avec Deny</span>
-              <span className="block text-sm text-mist tabular-nums">{best > 0 ? `Record : ${best}` : 'Deny Run'}</span>
-            </span>
-          </button>
+          <Games />
         </div>
 
         {desktop && (
@@ -112,13 +97,6 @@ export function Home() {
           </div>
         )}
       </motion.section>
-      <DenyRun
-        open={playing}
-        onClose={() => {
-          setPlaying(false)
-          setBest(readBest())
-        }}
-      />
     </Page>
   )
 }
