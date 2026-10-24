@@ -18,7 +18,7 @@ const STEP = 132
 const TOP = 40
 
 export function Timeline() {
-  const { data, error, loading, reload } = useLoad(api.getTimeline)
+  const { data, error, loading, reload } = useLoad(api.getTimeline, 'timeline')
   const urls = useImageUrls((data ?? []).map((e) => e.image_path))
   const desktop = useMediaQuery(DESKTOP)
   const [selectedId, setSelectedId] = useState<string | null>(null)

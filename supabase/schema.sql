@@ -32,8 +32,10 @@ alter table public.timeline_events add column if not exists song_url text;
 create table if not exists public.reasons (
   id         uuid primary key default gen_random_uuid(),
   text       text not null,
+  favorite   boolean not null default false,
   created_at timestamptz not null default now()
 );
+alter table public.reasons add column if not exists favorite boolean not null default false;
 
 -- Mur de photos (page « Nous »)
 create table if not exists public.photos (

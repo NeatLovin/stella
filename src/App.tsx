@@ -1,9 +1,11 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { CursorGlow } from './components/CursorGlow'
 import { CursorTrail } from './components/CursorTrail'
+import { OfflineBanner } from './components/OfflineBanner'
 import { Loading } from './components/Page'
 import { StarrySky } from './components/StarrySky'
 import { api, configError } from './lib/api'
+import { forgetTrusted, isTrusted, markTrusted } from './lib/offline'
 import { Login } from './pages/Login'
 
 const loadHub = () => import('./Hub')
@@ -26,11 +28,21 @@ export default function App() {
 
   useEffect(() => {
     if (configError) return
-    void api.getSession().then((s) => setSignedIn(Boolean(s)))
+    // Hors-ligne, la session ne peut pas être renouvelée : un appareil déjà connecté
+    // rouvre quand même le site avec les données gardées en mémoire.
+    const offlineOk = () => !navigator.onLine && isTrusted()
+    void api
+      .getSession()
+      .then((s) => setSignedIn(Boolean(s) || offlineOk()))
+      .catch(() => setSignedIn(offlineOk()))
     // Précharge le reste du site pendant que l'écran de connexion s'affiche
     const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300))
     idle(() => void loadHub())
-    return api.onAuthChange(setSignedIn)
+    return api.onAuthChange((ok, event) => {
+      if (ok) markTrusted()
+      if (event === 'SIGNED_OUT') forgetTrusted()
+      setSignedIn(ok || offlineOk())
+    })
   }, [])
 
   if (configError) {
@@ -49,6 +61,7 @@ export default function App() {
       <StarrySky />
       <CursorGlow />
       <CursorTrail />
+      <OfflineBanner />
       {signedIn === null ? (
         <Loading />
       ) : signedIn ? (

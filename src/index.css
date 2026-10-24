@@ -270,3 +270,34 @@ body::before {
     cursor: not-allowed;
   }
 }
+
+/* Barres de défilement : fines, bleu électrique, discrètes au repos (PC) */
+@media (hover: hover) and (pointer: fine) {
+  html {
+    scrollbar-color: rgb(125 162 255 / 0.45) transparent; /* Firefox, Chrome, Edge */
+    scrollbar-width: thin;
+  }
+  html:hover {
+    scrollbar-color: rgb(125 162 255 / 0.7) transparent;
+  }
+  /* Safari (et anciens Chrome) */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background: linear-gradient(180deg, #7da2ff, #2e5bff) padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    border-width: 2px;
+    background: linear-gradient(180deg, #a9c0ff, #4f76ff) padding-box;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}

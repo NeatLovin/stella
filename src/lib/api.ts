@@ -27,6 +27,7 @@ export interface TimelineEvent {
 export interface Reason {
   id: string
   text: string
+  favorite: boolean
 }
 
 export interface Photo {
@@ -48,7 +49,7 @@ export type WishlistInput = { name: string; url: string | null; image_path: stri
 
 export interface Api {
   getSession(): Promise<Session | null>
-  onAuthChange(cb: (signedIn: boolean) => void): () => void
+  onAuthChange(cb: (signedIn: boolean, event?: string) => void): () => void
   signIn(password: string): Promise<void>
   signOut(): Promise<void>
 
@@ -57,6 +58,7 @@ export interface Api {
   setEventImage(id: string, image_path: string | null): Promise<void>
   setEventSong(id: string, song_url: string | null): Promise<void>
   getReasons(): Promise<Reason[]>
+  setReasonFavorite(id: string, favorite: boolean): Promise<void>
 
   getPhotos(): Promise<Photo[]>
   addPhoto(image_path: string, caption: string | null): Promise<void>
@@ -100,7 +102,7 @@ function createSupabaseApi(): Api {
       return (await sb.auth.getSession()).data.session
     },
     onAuthChange(cb) {
-      const { data } = sb.auth.onAuthStateChange((_e, session) => cb(Boolean(session)))
+      const { data } = sb.auth.onAuthStateChange((event, session) => cb(Boolean(session), event))
       return () => data.subscription.unsubscribe()
     },
     async signIn(password) {
@@ -141,7 +143,10 @@ function createSupabaseApi(): Api {
       await sb.storage.from(BUCKET).remove([photo.image_path])
     },
     async getReasons() {
-      return check(await sb.from('reasons').select('id, text').order('created_at')) as Reason[]
+      return check(await sb.from('reasons').select('id, text, favorite').order('created_at')) as Reason[]
+    },
+    async setReasonFavorite(id, favorite) {
+      check(await sb.from('reasons').update({ favorite }).eq('id', id))
     },
 
     async getWishlist() {

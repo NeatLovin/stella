@@ -10,7 +10,7 @@ import { compressImage } from '../lib/image'
 type Editing = { mode: 'new' } | { mode: 'edit'; item: WishlistItem }
 
 export function Wishlist() {
-  const { data, error, loading, reload } = useLoad(api.getWishlist)
+  const { data, error, loading, reload } = useLoad(api.getWishlist, 'wishlist')
   const urls = useImageUrls((data ?? []).map((w) => w.image_path))
   const [editing, setEditing] = useState<Editing | null>(null)
 

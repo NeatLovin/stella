@@ -45,7 +45,7 @@ export function createDemoApi(): Api {
     'Deuxième raison, un peu plus longue, pour voir comment le texte se répartit sur plusieurs lignes.',
     'Troisième raison de démonstration.',
     'Quatrième raison de démonstration.',
-  ].map((text) => ({ id: uid(), text }))
+  ].map((text) => ({ id: uid(), text, favorite: false }))
 
   let wishlist: WishlistItem[] = [
     { id: uid(), name: 'Un plaid', url: 'https://example.com/plaid', image_path: null, created_at: new Date().toISOString() },
@@ -112,7 +112,11 @@ export function createDemoApi(): Api {
     },
     async getReasons() {
       await wait()
-      return reasons
+      return reasons.map((r) => ({ ...r }))
+    },
+    async setReasonFavorite(id, favorite) {
+      const r = reasons.find((x) => x.id === id)
+      if (r) r.favorite = favorite
     },
     async getWishlist() {
       await wait()

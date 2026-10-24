@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { BottomSheet } from '../components/BottomSheet'
+import { IconHeart } from '../components/icons'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api, type Reason } from '../lib/api'
@@ -51,7 +53,7 @@ function reasonOfTheDay(reasons: Reason[]): Reason {
 }
 
 export function Jar() {
-  const { data, error, loading, reload } = useLoad(api.getReasons)
+  const { data, error, loading, reload } = useLoad(api.getReasons, 'reasons')
 
   return (
     <Page wide title="Le bocal" intro="Une raison par jour. Et d’autres, quand tu en as besoin.">
@@ -67,6 +69,24 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
   const today = useMemo(() => reasonOfTheDay(reasons), [reasons])
   const ids = useMemo(() => reasons.map((r) => r.id), [reasons])
   const [current, setCurrent] = useState<Reason>(today)
+  // Favoris : mis à jour tout de suite à l'écran, puis enregistrés
+  const [fav, setFav] = useState<Record<string, boolean>>({})
+  const [favError, setFavError] = useState<string | null>(null)
+  const [showFavs, setShowFavs] = useState(false)
+  const isFav = (r: Reason) => fav[r.id] ?? r.favorite
+  const favorites = reasons.filter(isFav)
+
+  const toggleFav = async (r: Reason) => {
+    const next = !isFav(r)
+    setFav((f) => ({ ...f, [r.id]: next }))
+    setFavError(null)
+    try {
+      await api.setReasonFavorite(r.id, next)
+    } catch (e) {
+      setFav((f) => ({ ...f, [r.id]: !next }))
+      setFavError(e instanceof Error ? e.message : String(e))
+    }
+  }
 
   // La raison du jour compte comme déjà lue
   useEffect(() => {
@@ -88,15 +108,16 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
         <AnimatePresence mode="wait">
           <motion.figure
             key={current.id + (isToday ? '-today' : '')}
-            className="w-full origin-top rounded-[1.25rem] border border-glow/20 bg-starlight/[0.04] px-5 py-6 lg:mx-auto lg:max-w-[36rem] lg:rounded-[1.5rem] lg:px-9 lg:py-8 shadow-[0_0_50px_rgb(46_91_255/0.15)] backdrop-blur-sm"
+            className="relative w-full origin-top rounded-[1.25rem] border border-glow/20 bg-starlight/[0.04] px-5 py-6 lg:mx-auto lg:max-w-[36rem] lg:rounded-[1.5rem] lg:px-9 lg:py-8 shadow-[0_0_50px_rgb(46_91_255/0.15)] backdrop-blur-sm"
             initial={{ rotateX: -80, opacity: 0, y: -10 }}
             animate={{ rotateX: 0, opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
             transition={{ type: 'spring', damping: 18, stiffness: 140 }}
           >
-            <figcaption className="font-display text-lg text-glow italic lg:text-xl">
+            <figcaption className="font-display pr-10 text-lg text-glow italic lg:text-xl">
               {isToday ? 'La raison du jour' : 'Une autre raison'}
             </figcaption>
+            <FavButton active={isFav(current)} onToggle={() => void toggleFav(current)} />
             <blockquote className="font-display mt-3 text-[1.55rem] leading-snug lg:mt-4 lg:text-[clamp(1.75rem,1.9vw,2.1rem)] lg:leading-[1.25]">
               {current.text}
             </blockquote>
@@ -114,7 +135,62 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
         <JarArt count={reasons.length} />
         <span className="btn-ghost mt-5">Tirer une autre raison</span>
       </button>
+
+      <div className="mt-6 flex flex-col items-center lg:col-start-2 lg:mt-0">
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
+          onClick={() => setShowFavs(true)}
+        >
+          <IconHeart width={16} height={16} filled={favorites.length > 0} className="text-rose" />
+          Mes préférées{favorites.length > 0 ? ` (${favorites.length})` : ''}
+        </button>
+        {favError && (
+          <p role="alert" className="mt-1 text-center text-sm text-rose">
+            Impossible d’enregistrer le favori : {favError}
+          </p>
+        )}
+      </div>
+
+      <BottomSheet open={showFavs} onClose={() => setShowFavs(false)} label="Mes raisons préférées">
+        <h2 className="font-display text-3xl font-medium">Mes préférées</h2>
+        {favorites.length === 0 ? (
+          <p className="mt-3 text-mist">Touche le cœur d’une raison pour la garder ici et la relire quand tu veux.</p>
+        ) : (
+          <ul className="mt-5 space-y-3">
+            {favorites.map((r) => (
+              <li key={r.id} className="relative rounded-[1rem] border border-glow/15 bg-starlight/[0.04] py-4 pr-14 pl-5">
+                <p className="font-display text-[1.25rem] leading-snug">{r.text}</p>
+                <FavButton active onToggle={() => void toggleFav(r)} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </BottomSheet>
     </div>
+  )
+}
+
+function FavButton({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      aria-label={active ? 'Retirer des préférées' : 'Ajouter aux préférées'}
+      className={`absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+        active ? 'text-rose' : 'text-mist/70 hover:text-rose'
+      }`}
+    >
+      <motion.span
+        key={String(active)}
+        initial={{ scale: active ? 0.4 : 1 }}
+        animate={{ scale: 1 }}
+        transition={{ type: 'spring', damping: 9, stiffness: 320 }}
+      >
+        <IconHeart width={22} height={22} filled={active} className={active ? 'drop-shadow-[0_0_8px_rgb(255_107_154/0.7)]' : ''} />
+      </motion.span>
+    </button>
   )
 }
 

@@ -78,3 +78,12 @@ export const IconChevron = (p: SVGProps<SVGSVGElement> & { dir?: 'left' | 'right
     </svg>
   )
 }
+
+export const IconHeart = (p: SVGProps<SVGSVGElement> & { filled?: boolean }) => {
+  const { filled, ...rest } = p
+  return (
+    <svg {...base(rest)} fill={filled ? 'currentColor' : 'none'}>
+      <path d="M12 20s-7.5-4.4-7.5-10A4.3 4.3 0 0 1 12 7.4 4.3 4.3 0 0 1 19.5 10c0 5.6-7.5 10-7.5 10Z" />
+    </svg>
+  )
+}

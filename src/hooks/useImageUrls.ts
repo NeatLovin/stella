@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
+import { readCache, writeCache } from '../lib/offline'
 
 // Les liens signés vers les photos expirent après 6 h (voir api.imageUrls).
 // On les renouvelle avant expiration, et au retour sur l'onglet (téléphone mis en veille).
@@ -8,7 +9,8 @@ const CHECK_EVERY = 10 * 60 * 1000
 
 /** Liens d'affichage des photos privées, renouvelés automatiquement. */
 export function useImageUrls(paths: (string | null | undefined)[]): Record<string, string> {
-  const [urls, setUrls] = useState<Record<string, string>>({})
+  // Derniers liens connus : hors-ligne, le service worker retrouve la photo par son chemin
+  const [urls, setUrls] = useState<Record<string, string>>(() => readCache<Record<string, string>>('imageUrls') ?? {})
   const fetchedAt = useRef<Record<string, number>>({})
   const list = [...new Set(paths.filter((p): p is string => Boolean(p)))].sort()
   const key = list.join('|')
@@ -25,7 +27,11 @@ export function useImageUrls(paths: (string | null | undefined)[]): Record<strin
         const fresh = await api.imageUrls(stale)
         if (cancelled) return
         for (const p of stale) fetchedAt.current[p] = now
-        setUrls((prev) => ({ ...prev, ...fresh }))
+        setUrls((prev) => {
+          const next = { ...prev, ...fresh }
+          writeCache('imageUrls', next)
+          return next
+        })
       } catch {
         /* réseau indisponible : nouvel essai au prochain contrôle */
       }

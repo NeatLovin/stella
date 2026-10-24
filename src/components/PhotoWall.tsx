@@ -38,7 +38,7 @@ const SPREAD_WIDTH = 'w-[46%]'
 /** Polaroids étalés qui se chevauchent légèrement. Remplit son parent (position relative requise). */
 export function PhotoWall({ spread = false }: { spread?: boolean }) {
   const SLOTS = spread ? SPREAD : COMPACT
-  const { data, reload } = useLoad(api.getPhotos)
+  const { data, reload } = useLoad(api.getPhotos, 'photos')
   const urls = useImageUrls((data ?? []).map((p) => p.image_path))
   const [adding, setAdding] = useState<File | null>(null)
   const [viewing, setViewing] = useState<number | null>(null)

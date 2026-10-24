@@ -16,7 +16,7 @@ import { Wishlist } from './pages/Wishlist'
 
 /** Tout le site après connexion (chargé séparément de l'écran de mot de passe). */
 export default function Hub() {
-  const { data: settings } = useLoad(api.getSettings)
+  const { data: settings } = useLoad(api.getSettings, 'settings')
   const [welcome, setWelcome] = useState(hasWelcomeFlag)
   if (!settings) return <Loading />
   if (welcome && settings.welcome) {

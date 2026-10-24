@@ -33,7 +33,7 @@ const loadAll = async () => {
 }
 
 export function Cycle() {
-  const { data, error, loading, reload } = useLoad(loadAll)
+  const { data, error, loading, reload } = useLoad(loadAll, 'cycle')
   const today = todayISO()
 
   return (

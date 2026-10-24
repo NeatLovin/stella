@@ -7,6 +7,7 @@ import '@fontsource/cormorant-garamond/latin-500-italic.css'
 import '@fontsource/jost/latin-400.css'
 import '@fontsource/jost/latin-500.css'
 import App from './App'
+import { registerServiceWorker } from './lib/registerSW'
 import './index.css'
 
 createRoot(document.getElementById('root')!).render(
@@ -14,3 +15,5 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+registerServiceWorker()
