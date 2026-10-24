@@ -3,22 +3,25 @@ import { useEffect, useMemo, useState } from 'react'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { api, type Reason } from '../lib/api'
-import { drawFromBag, markSeen } from '../lib/bag'
+import { drawFromBag, emptyBag, markSeen, uniqueByText, type BagState } from '../lib/bag'
 import { diffDays, todayISO } from '../lib/dates'
 
-// Tirages déjà faits sur ce téléphone, conservés entre les visites
+// Tirages déjà faits sur cet appareil, conservés entre les visites
 const BAG_KEY = 'stella.jar.seen'
-const readSeen = (): string[] => {
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+const readBag = (): BagState => {
   try {
-    const v = JSON.parse(localStorage.getItem(BAG_KEY) ?? '[]')
-    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : []
+    const v = JSON.parse(localStorage.getItem(BAG_KEY) ?? 'null')
+    if (Array.isArray(v)) return { seen: strings(v), cooldown: [] } // ancien format
+    if (v && typeof v === 'object') return { seen: strings(v.seen), cooldown: strings(v.cooldown) }
   } catch {
-    return []
+    /* illisible : on repart de zéro */
   }
+  return emptyBag()
 }
-const writeSeen = (seen: string[]) => {
+const writeBag = (state: BagState) => {
   try {
-    localStorage.setItem(BAG_KEY, JSON.stringify(seen))
+    localStorage.setItem(BAG_KEY, JSON.stringify(state))
   } catch {
     /* stockage indisponible : le sac repart de zéro à la prochaine visite */
   }
@@ -55,7 +58,7 @@ export function Jar() {
       {loading && <Skeleton variant="jar" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">Le bocal attend ses premières raisons.</p>}
-      {data && data.length > 0 && <JarContent reasons={data} />}
+      {data && data.length > 0 && <JarContent reasons={uniqueByText(data)} />}
     </Page>
   )
 }
@@ -67,13 +70,13 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
 
   // La raison du jour compte comme déjà lue
   useEffect(() => {
-    writeSeen(markSeen(ids, readSeen(), today.id))
+    writeBag(markSeen(ids, readBag(), today.id))
   }, [ids, today.id])
 
   const draw = () => {
     if (reasons.length < 2) return
-    const { id, seen } = drawFromBag(ids, readSeen(), current.id)
-    writeSeen(seen)
+    const { id, state } = drawFromBag(ids, readBag())
+    writeBag(state)
     setCurrent(reasons.find((r) => r.id === id)!)
   }
 
