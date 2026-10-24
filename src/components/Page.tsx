@@ -1,10 +1,14 @@
 import type { ReactNode } from 'react'
 
-export function Page({ title, intro, children }: { title?: string; intro?: string; children: ReactNode }) {
+/**
+ * Gabarit de page. Sur téléphone : colonne étroite.
+ * Sur ordinateur (≥ 1024 px) : `wide` élargit la page pour les mises en page en colonnes.
+ */
+export function Page({ title, intro, wide, children }: { title?: string; intro?: string; wide?: boolean; children: ReactNode }) {
   return (
-    <main className="safe-top safe-bottom mx-auto w-full max-w-xl px-5">
+    <main className={`safe-top safe-bottom mx-auto w-full max-w-xl px-5 ${wide ? 'lg:max-w-6xl lg:px-10 2xl:max-w-7xl' : ''}`}>
       {title && (
-        <header className="mb-8 pt-4">
+        <header className="mb-8 pt-4 lg:mb-12">
           <h1 className="font-display text-[clamp(2.4rem,10vw,3.25rem)] leading-none font-medium tracking-tight">{title}</h1>
           {intro && <p className="mt-3 max-w-[36ch] text-mist">{intro}</p>}
         </header>
@@ -42,7 +46,7 @@ export function Skeleton({ variant }: { variant: 'timeline' | 'cards' | 'jar' | 
         </div>
       )}
       {variant === 'cards' && (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-7">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 xl:grid-cols-5">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i}>
               <span className="shimmer block aspect-[4/5] rounded-[1.1rem]" />

@@ -21,7 +21,7 @@ export function Wishlist() {
   }
 
   return (
-    <Page title="Wishlist" intro="Tout ce qui te fait envie, au même endroit.">
+    <Page wide title="Wishlist" intro="Tout ce qui te fait envie, au même endroit.">
       <button type="button" className="btn-primary mb-8" onClick={() => setEditing({ mode: 'new' })}>
         <IconPlus width={20} height={20} />
         Ajouter une envie
@@ -32,7 +32,7 @@ export function Wishlist() {
       {data && data.length === 0 && <p className="text-mist">Ta wishlist est vide. Ajoute ta première envie avec le bouton ci-dessus.</p>}
 
       {data && data.length > 0 && (
-        <ul className="grid grid-cols-2 gap-x-4 gap-y-7">
+        <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10 xl:grid-cols-5">
           {data.map((item) => (
             <li key={item.id}>
               <WishCard

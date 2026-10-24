@@ -37,7 +37,7 @@ export function Cycle() {
   const today = todayISO()
 
   return (
-    <Page title="Cycle">
+    <Page wide title="Cycle">
       {loading && <Skeleton variant="cycle" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && <CycleContent periods={data.periods} ovulations={data.ovulations} today={today} reload={reload} />}
@@ -82,66 +82,70 @@ function CycleContent({
   const ovulationToday = ovulations.find((o) => o.date === today)
 
   return (
-    <>
-      {state.status === 'empty' ? (
-        <EmptyStart onSave={(d) => run(() => api.addPeriod(d))} busy={busy} />
-      ) : (
-        <>
-          <Ring state={state} />
-          <div className="mt-8 flex flex-wrap justify-center gap-3">
-            {ongoing ? (
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={busy}
-                onClick={() => run(() => api.updatePeriod(last!.id, { end_date: today }))}
-              >
-                Mes règles sont terminées
-              </button>
-            ) : (
-              !startedToday && (
+    <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-16 xl:gap-24">
+      <div className="lg:sticky lg:top-10">
+        {state.status === 'empty' ? (
+          <EmptyStart onSave={(d) => run(() => api.addPeriod(d))} busy={busy} />
+        ) : (
+          <>
+            <Ring state={state} />
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              {ongoing ? (
                 <button
                   type="button"
-                  className={state.status === 'ok' && state.daysUntilNext > 3 ? 'btn-ghost' : 'btn-primary'}
+                  className="btn-primary"
                   disabled={busy}
-                  onClick={() => run(() => api.addPeriod(today))}
+                  onClick={() => run(() => api.updatePeriod(last!.id, { end_date: today }))}
                 >
-                  Mes règles ont commencé
+                  Mes règles sont terminées
                 </button>
-              )
-            )}
-            <button
-              type="button"
-              className="btn-ghost"
-              disabled={busy}
-              onClick={() => run(() => (ovulationToday ? api.deleteOvulation(ovulationToday.id) : api.addOvulation(today)))}
-            >
-              {ovulationToday ? 'Retirer l’ovulation du jour' : 'Ovulation aujourd’hui'}
-            </button>
-          </div>
-        </>
-      )}
+              ) : (
+                !startedToday && (
+                  <button
+                    type="button"
+                    className={state.status === 'ok' && state.daysUntilNext > 3 ? 'btn-ghost' : 'btn-primary'}
+                    disabled={busy}
+                    onClick={() => run(() => api.addPeriod(today))}
+                  >
+                    Mes règles ont commencé
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={busy}
+                onClick={() => run(() => (ovulationToday ? api.deleteOvulation(ovulationToday.id) : api.addOvulation(today)))}
+              >
+                {ovulationToday ? 'Retirer l’ovulation du jour' : 'Ovulation aujourd’hui'}
+              </button>
+            </div>
+          </>
+        )}
 
-      {actionError && (
-        <p role="alert" className="mt-4 text-center text-sm text-rose">
-          Action impossible : {actionError}
+        {actionError && (
+          <p role="alert" className="mt-4 text-center text-sm text-rose">
+            Action impossible : {actionError}
+          </p>
+        )}
+      </div>
+
+      <div>
+        <Calendar periods={periods} ovulations={ovulations} state={state} today={today} onSelect={setSelectedDay} />
+
+        <p className="mt-8 text-sm leading-relaxed text-mist/80">
+          Prévisions indicatives, calculées sur la moyenne de tes derniers cycles
+          {state.status === 'ok' && state.usingDefaults ? ' (28 jours par défaut tant qu’il y a moins de 2 cycles)' : ''}. Ce n’est pas une
+          méthode de contraception.
         </p>
-      )}
-
-      <Calendar periods={periods} ovulations={ovulations} state={state} today={today} onSelect={setSelectedDay} />
-
-      <p className="mt-8 text-sm leading-relaxed text-mist/80">
-        Prévisions indicatives, calculées sur la moyenne de tes derniers cycles
-        {state.status === 'ok' && state.usingDefaults ? ' (28 jours par défaut tant qu’il y a moins de 2 cycles)' : ''}. Ce n’est pas une
-        méthode de contraception.
-      </p>
+      </div>
 
       <BottomSheet open={Boolean(selectedDay)} onClose={() => setSelectedDay(null)} label="Modifier ce jour">
         {selectedDay && (
           <DayActions day={selectedDay} today={today} periods={periods} ovulations={ovulations} state={state} busy={busy} run={run} />
         )}
       </BottomSheet>
-    </>
+    </div>
   )
 }
 
@@ -187,7 +191,7 @@ function Ring({ state }: { state: Extract<CycleState, { status: 'ok' }> }) {
 
   return (
     <section aria-label="Cycle en cours" className="flex flex-col items-center">
-      <div className="relative w-full max-w-[18rem]">
+      <div className="relative w-full max-w-[18rem] lg:max-w-[22rem]">
         <svg viewBox="0 0 240 240" className="w-full -rotate-0" aria-hidden>
           <circle cx="120" cy="120" r={R} fill="none" stroke="rgb(125 162 255 / 0.12)" strokeWidth="14" />
           {segments.map((s) => (
@@ -259,7 +263,7 @@ function Calendar({
   const currentMonth = month.getMonth()
 
   return (
-    <section className="mt-12" aria-label="Calendrier">
+    <section className="mt-12 lg:mt-0" aria-label="Calendrier">
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"

@@ -51,7 +51,7 @@ export function Jar() {
   const { data, error, loading, reload } = useLoad(api.getReasons)
 
   return (
-    <Page title="Le bocal" intro="Une raison par jour. Et d’autres, quand tu en as besoin.">
+    <Page wide title="Le bocal" intro="Une raison par jour. Et d’autres, quand tu en as besoin.">
       {loading && <Skeleton variant="jar" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">Le bocal attend ses premières raisons.</p>}
@@ -80,19 +80,23 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
   const isToday = current.id === today.id
 
   return (
-    <div className="flex flex-col items-center">
-      <div className="min-h-56 w-full [perspective:900px]">
+    <div className="flex flex-col items-center lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-center lg:gap-16 xl:gap-24">
+      <div className="min-h-56 w-full [perspective:900px] lg:flex lg:min-h-[26rem] lg:items-center">
         <AnimatePresence mode="wait">
           <motion.figure
             key={current.id + (isToday ? '-today' : '')}
-            className="origin-top rounded-[1.25rem] border border-glow/20 bg-starlight/[0.04] px-6 py-7 shadow-[0_0_50px_rgb(46_91_255/0.15)] backdrop-blur-sm"
+            className="w-full origin-top rounded-[1.25rem] border border-glow/20 bg-starlight/[0.04] px-6 py-7 lg:rounded-[1.75rem] lg:px-12 lg:py-12 shadow-[0_0_50px_rgb(46_91_255/0.15)] backdrop-blur-sm"
             initial={{ rotateX: -80, opacity: 0, y: -10 }}
             animate={{ rotateX: 0, opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
             transition={{ type: 'spring', damping: 18, stiffness: 140 }}
           >
-            <figcaption className="font-display text-lg text-glow italic">{isToday ? 'La raison du jour' : 'Une autre raison'}</figcaption>
-            <blockquote className="font-display mt-3 text-[1.75rem] leading-snug">{current.text}</blockquote>
+            <figcaption className="font-display text-lg text-glow italic lg:text-2xl">
+              {isToday ? 'La raison du jour' : 'Une autre raison'}
+            </figcaption>
+            <blockquote className="font-display mt-3 text-[1.75rem] leading-snug lg:mt-5 lg:text-[clamp(2.25rem,2.8vw,3rem)] lg:leading-[1.2]">
+              {current.text}
+            </blockquote>
           </motion.figure>
         </AnimatePresence>
       </div>
@@ -101,7 +105,7 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
         type="button"
         onClick={draw}
         disabled={reasons.length < 2}
-        className="group mt-8 flex flex-col items-center disabled:opacity-60"
+        className="group mt-8 flex flex-col items-center disabled:opacity-60 lg:mt-0"
         aria-label="Tirer une autre raison"
       >
         <JarArt count={reasons.length} />
@@ -127,7 +131,7 @@ function JarArt({ count }: { count: number }) {
   }, [count])
 
   return (
-    <svg viewBox="0 0 160 230" className="h-48 w-auto transition-transform duration-300 group-active:-rotate-6" aria-hidden>
+    <svg viewBox="0 0 160 230" className="h-48 w-auto lg:h-80 transition-transform duration-300 group-active:-rotate-6" aria-hidden>
       <defs>
         <clipPath id="jar-body">
           <path d="M40 58c-14 8-22 22-22 40v100c0 10 8 18 18 18h88c10 0 18-8 18-18V98c0-18-8-32-22-40Z" />

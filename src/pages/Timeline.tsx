@@ -6,6 +6,7 @@ import { IconExternal } from '../components/icons'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { useImageUrls } from '../hooks/useImageUrls'
+import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery'
 import { api, type TimelineEvent } from '../lib/api'
 import { diffDays, formatRange, formatShort, todayISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
@@ -19,19 +20,50 @@ const TOP = 40
 export function Timeline() {
   const { data, error, loading, reload } = useLoad(api.getTimeline)
   const urls = useImageUrls((data ?? []).map((e) => e.image_path))
+  const desktop = useMediaQuery(DESKTOP)
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const selected = data?.find((e) => e.id === selectedId) ?? null
+  // Sur ordinateur, la fiche reste affichée à droite : par défaut, le souvenir le plus récent
+  const latest = data?.length ? [...data].sort((a, b) => a.date_start.localeCompare(b.date_start)).at(-1)! : null
+  const selected = data?.find((e) => e.id === selectedId) ?? (desktop ? latest : null)
+
+  const detail = selected && (
+    <EventDetail key={selected.id} event={selected} src={selected.image_path ? urls[selected.image_path] : undefined} onChanged={reload} />
+  )
 
   return (
-    <Page title="Notre constellation" intro="Chaque étoile est un moment à nous. Touche-en une pour la revoir.">
+    <Page
+      wide
+      title="Notre constellation"
+      intro={`Chaque étoile est un moment à nous. ${desktop ? 'Clique' : 'Touche'}-en une pour la revoir.`}
+    >
       {loading && <Skeleton variant="timeline" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">La constellation attend sa première étoile.</p>}
-      {data && data.length > 0 && <Constellation events={data} urls={urls} onSelect={(e) => setSelectedId(e.id)} />}
+      {data && data.length > 0 && (
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:items-start lg:gap-14 xl:grid-cols-[minmax(0,1fr)_minmax(0,31rem)] xl:gap-20">
+          <Constellation
+            events={data}
+            urls={urls}
+            activeId={desktop ? (selected?.id ?? null) : null}
+            onSelect={(e) => setSelectedId(e.id)}
+          />
+          {desktop && (
+            <aside
+              aria-label="Souvenir sélectionné"
+              aria-live="polite"
+              className="sticky top-10 max-h-[calc(100dvh-var(--tabbar-h)-var(--tabbar-gap)-4rem)] overflow-y-auto rounded-[1.75rem] border border-glow/15 bg-sky/70 p-8 shadow-[0_20px_60px_rgb(0_0_0/0.35)] backdrop-blur-md"
+            >
+              {detail}
+            </aside>
+          )}
+        </div>
+      )}
 
-      <BottomSheet open={Boolean(selected)} onClose={() => setSelectedId(null)} label={selected?.title ?? ''}>
-        {selected && <EventDetail event={selected} src={selected.image_path ? urls[selected.image_path] : undefined} onChanged={reload} />}
-      </BottomSheet>
+      {!desktop && (
+        <BottomSheet open={Boolean(selected)} onClose={() => setSelectedId(null)} label={selected?.title ?? ''}>
+          {detail}
+        </BottomSheet>
+      )}
     </Page>
   )
 }
@@ -39,10 +71,12 @@ export function Timeline() {
 function Constellation({
   events,
   urls,
+  activeId,
   onSelect,
 }: {
   events: TimelineEvent[]
   urls: Record<string, string>
+  activeId: string | null
   onSelect: (e: TimelineEvent) => void
 }) {
   const sorted = [...events].sort((a, b) => a.date_start.localeCompare(b.date_start))
@@ -135,17 +169,26 @@ function Constellation({
               <button
                 type="button"
                 onClick={() => open(e)}
+                aria-current={activeId === e.id ? 'true' : undefined}
                 className={`group absolute top-0 flex -translate-y-1/2 items-center gap-3 ${
                   labelRight ? '-left-[22px] flex-row text-left' : '-right-[22px] flex-row-reverse text-right'
                 }`}
               >
                 <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
                   <span
-                    className={`absolute rounded-full blur-md transition-transform group-active:scale-150 ${
-                      e.highlight ? 'h-9 w-9 bg-gold/50' : 'h-7 w-7 bg-glow/45'
-                    }`}
+                    className={`absolute rounded-full blur-md transition-transform duration-300 group-hover:scale-125 group-active:scale-150 ${
+                      activeId === e.id ? 'scale-150' : ''
+                    } ${e.highlight ? 'h-9 w-9 bg-gold/50' : 'h-7 w-7 bg-glow/45'}`}
                   />
                   <span className={`relative rounded-full ${e.highlight ? 'h-3.5 w-3.5 bg-gold' : 'h-2.5 w-2.5 bg-starlight'}`} />
+                  {activeId === e.id && (
+                    <motion.span
+                      layoutId="active-star"
+                      className={`absolute h-9 w-9 rounded-full border ${e.highlight ? 'border-gold/70' : 'border-glow/80'}`}
+                      transition={{ type: 'spring', damping: 26, stiffness: 300 }}
+                      aria-hidden
+                    />
+                  )}
                   {burst === e.id && (
                     <motion.span
                       className={`absolute h-3 w-3 rounded-full ${e.highlight ? 'bg-gold' : 'bg-glow'}`}

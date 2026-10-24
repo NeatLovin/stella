@@ -36,7 +36,7 @@ export function PhotoWall() {
     <div className="absolute inset-0" aria-label="Nos photos">
       {pile.length === 0 && (
         <div
-          className="absolute top-[18%] left-[12%] flex aspect-[4/5] w-[78%] -rotate-6 items-center justify-center border-2 border-dashed border-glow/40 p-3 text-center text-xs text-mist"
+          className="absolute top-[18%] left-[12%] flex aspect-[4/5] w-[78%] -rotate-6 items-center justify-center border-2 border-dashed border-glow/40 p-3 text-center text-xs text-mist lg:text-base"
           aria-hidden
         >
           Votre première photo ici
@@ -51,7 +51,7 @@ export function PhotoWall() {
             key={p.id}
             type="button"
             onClick={() => setViewing(i)}
-            className="absolute w-[64%] bg-starlight p-1.5 pb-4 shadow-[0_8px_24px_rgb(0_0_0/0.55)]"
+            className="absolute w-[64%] bg-starlight p-1.5 pb-4 lg:p-3 lg:pb-9 shadow-[0_8px_24px_rgb(0_0_0/0.55)]"
             style={{ top: `${slot.top}%`, left: `${slot.left}%`, zIndex: SLOTS.length - i }}
             initial={{ opacity: 0, scale: 0.6, rotate: 0 }}
             animate={{ opacity: 1, scale: 1, rotate: slot.rotate }}
