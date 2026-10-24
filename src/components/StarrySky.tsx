@@ -120,6 +120,8 @@ export function StarrySky() {
           nextShot = t + 9000 + Math.random() * 12000
         }
       }
+      // Le mini-jeu est ouvert par-dessus : inutile de redessiner le ciel caché
+      if (document.body.dataset.playing) return
       draw(t)
     }
 

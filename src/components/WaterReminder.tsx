@@ -49,7 +49,7 @@ export function WaterReminder({ sponsor }: { sponsor: string }) {
 
   useEffect(() => {
     const check = () => {
-      if (document.hidden) return
+      if (document.hidden || document.body.dataset.playing) return
       const next = Number(read(KEY_NEXT) ?? 0)
       if (Date.now() >= next) {
         setMessage(MESSAGES[Math.floor(Math.random() * MESSAGES.length)])

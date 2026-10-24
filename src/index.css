@@ -301,3 +301,25 @@ body::before {
     background: transparent;
   }
 }
+
+/* Deny cligne des yeux sur le logo */
+.deny-blink {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: deny-blink 4.2s infinite;
+}
+@keyframes deny-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  96% {
+    transform: scaleY(0.1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .deny-blink {
+    animation: none;
+  }
+}
