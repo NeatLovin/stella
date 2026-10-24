@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { CursorGlow } from './components/CursorGlow'
+import { CursorTrail } from './components/CursorTrail'
 import { Loading } from './components/Page'
 import { StarrySky } from './components/StarrySky'
 import { api, configError } from './lib/api'
@@ -36,7 +37,8 @@ export default function App() {
     return (
       <>
         <StarrySky />
-      <CursorGlow />
+        <CursorGlow />
+        <CursorTrail />
         <ConfigMissing />
       </>
     )
@@ -46,6 +48,7 @@ export default function App() {
     <>
       <StarrySky />
       <CursorGlow />
+      <CursorTrail />
       {signedIn === null ? (
         <Loading />
       ) : signedIn ? (
