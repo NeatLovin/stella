@@ -43,7 +43,7 @@ export function DenyRun({ open, onClose }: { open: boolean; onClose: () => void 
           tabIndex={-1}
           role="dialog"
           aria-modal
-          aria-label="Deny Run, le mini-jeu"
+          aria-label="Deny, le mini-jeu"
           className="fixed inset-0 z-[65] flex flex-col bg-night outline-none select-none [-webkit-touch-callout:none]"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -119,7 +119,7 @@ function Play({ onClose }: { onClose: () => void }) {
     >
       <header className="flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-2 md:absolute md:inset-x-0 md:top-0">
         <div>
-          <h2 className="font-display text-3xl font-medium">Deny Run</h2>
+          <h2 className="font-display text-3xl font-medium">Deny</h2>
           <p className="text-sm text-mist tabular-nums">Record : {best}</p>
         </div>
         <button

@@ -47,7 +47,7 @@ export function Games() {
         </span>
         <span>
           <span className="block font-display text-xl leading-tight">Jeux</span>
-          <span className="block text-sm text-mist">Deny Run · Jude</span>
+          <span className="block text-sm text-mist">Deny · Jude</span>
         </span>
       </button>
 
@@ -55,7 +55,7 @@ export function Games() {
         <h2 className="font-display text-3xl font-medium">Jeux</h2>
         <div className="mt-5 flex flex-col gap-3">
           <GameRow
-            title="Deny Run"
+            title="Deny"
             subtitle={readBest() > 0 ? `Record : ${readBest()}` : 'Saute par-dessus les cactus'}
             onClick={() => play('deny')}
           >
