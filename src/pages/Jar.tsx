@@ -80,21 +80,21 @@ function JarContent({ reasons }: { reasons: Reason[] }) {
   const isToday = current.id === today.id
 
   return (
-    <div className="flex flex-col items-center lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] lg:items-center lg:gap-16 xl:gap-24">
-      <div className="min-h-56 w-full [perspective:900px] lg:flex lg:min-h-[26rem] lg:items-center">
+    <div className="flex flex-col items-center lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-center lg:gap-16 xl:gap-24">
+      <div className="min-h-48 w-full [perspective:900px] lg:flex lg:min-h-[20rem] lg:items-center">
         <AnimatePresence mode="wait">
           <motion.figure
             key={current.id + (isToday ? '-today' : '')}
-            className="w-full origin-top rounded-[1.25rem] border border-glow/20 bg-starlight/[0.04] px-6 py-7 lg:rounded-[1.75rem] lg:px-12 lg:py-12 shadow-[0_0_50px_rgb(46_91_255/0.15)] backdrop-blur-sm"
+            className="w-full origin-top rounded-[1.25rem] border border-glow/20 bg-starlight/[0.04] px-5 py-6 lg:mx-auto lg:max-w-[36rem] lg:rounded-[1.5rem] lg:px-9 lg:py-8 shadow-[0_0_50px_rgb(46_91_255/0.15)] backdrop-blur-sm"
             initial={{ rotateX: -80, opacity: 0, y: -10 }}
             animate={{ rotateX: 0, opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8, transition: { duration: 0.15 } }}
             transition={{ type: 'spring', damping: 18, stiffness: 140 }}
           >
-            <figcaption className="font-display text-lg text-glow italic lg:text-2xl">
+            <figcaption className="font-display text-lg text-glow italic lg:text-xl">
               {isToday ? 'La raison du jour' : 'Une autre raison'}
             </figcaption>
-            <blockquote className="font-display mt-3 text-[1.75rem] leading-snug lg:mt-5 lg:text-[clamp(2.25rem,2.8vw,3rem)] lg:leading-[1.2]">
+            <blockquote className="font-display mt-3 text-[1.55rem] leading-snug lg:mt-4 lg:text-[clamp(1.75rem,1.9vw,2.1rem)] lg:leading-[1.25]">
               {current.text}
             </blockquote>
           </motion.figure>

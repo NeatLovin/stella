@@ -89,8 +89,8 @@ export function Home() {
         </div>
 
         {desktop && (
-          <div className="relative mx-auto aspect-[5/6] w-full max-w-[34rem]">
-            <PhotoWall />
+          <div className="relative mx-auto aspect-[1/1] w-full max-w-[36rem]">
+            <PhotoWall spread />
           </div>
         )}
       </motion.section>
