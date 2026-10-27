@@ -95,6 +95,7 @@ export function createDemoApi(): Api {
         couple_start: '2026-06-20',
         welcome:
           'Premier paragraphe du mot d’accueil.\n\nDeuxième paragraphe, un peu plus long pour voir comment le texte respire sur plusieurs lignes.\n\nTroisième paragraphe.',
+        flower_message: 'Premier paragraphe de la carte.\n\nDeuxième paragraphe de démonstration, un peu plus long.\n\nFin.',
       }
     },
     async getTimeline() {

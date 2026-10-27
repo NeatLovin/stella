@@ -1,10 +1,11 @@
 import { differenceInCalendarDays, intervalToDuration } from 'date-fns'
 import { motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
 import { Games } from '../components/Games'
+import { LilyEgg } from '../components/LilyEgg'
 import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery'
 import { formatLong, parse } from '../lib/dates'
 
@@ -15,6 +16,19 @@ export function Home() {
   const showWelcome = useShowWelcome()
   const desktop = useMediaQuery(DESKTOP)
   const [now, setNow] = useState(() => new Date())
+  // Surprise cachée : taper plusieurs fois d'affilée sur son prénom fait éclore le lys
+  const [lily, setLily] = useState(false)
+  const [bump, setBump] = useState(0)
+  const taps = useRef<number[]>([])
+  const tapName = () => {
+    const t = Date.now()
+    taps.current = [...taps.current.filter((x) => t - x < 2000), t]
+    if (taps.current.length >= 3) setBump((b) => b + 1)
+    if (taps.current.length >= 6) {
+      taps.current = []
+      setLily(true)
+    }
+  }
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
@@ -47,7 +61,15 @@ export function Home() {
       >
         <div className="flex flex-col">
           <h1 className="font-display glow-text text-[clamp(3.1rem,13.5vw,4.75rem)] lg:text-[clamp(4.5rem,6.2vw,6.5rem)] leading-[0.95] font-medium tracking-tight">
-            {her_name}
+            <motion.span
+              key={bump}
+              className="inline-block cursor-default select-none [touch-action:manipulation]"
+              animate={bump ? { scale: [1, 1.05, 1] } : undefined}
+              transition={{ duration: 0.22 }}
+              onClick={tapName}
+            >
+              {her_name}
+            </motion.span>
             <span className="block pl-10 text-glow italic">&amp; {his_name}</span>
           </h1>
           <p className="mt-5 text-mist">Ensemble depuis le {formatLong(couple_start)}</p>
@@ -97,6 +119,7 @@ export function Home() {
           </div>
         )}
       </motion.section>
+      <LilyEgg open={lily} onClose={() => setLily(false)} />
     </Page>
   )
 }

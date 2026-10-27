@@ -9,6 +9,8 @@ export interface Settings {
   couple_start: ISODate
   /** Mot d'accueil affiché après la connexion (paragraphes séparés par une ligne vide) */
   welcome: string
+  /** Message de la carte du lys caché (paragraphes séparés par une ligne vide) */
+  flower_message: string
 }
 
 export interface TimelineEvent {
@@ -128,6 +130,7 @@ function createSupabaseApi(): Api {
         his_name: map.his_name ?? '',
         couple_start: map.couple_start ?? '2026-07-30',
         welcome: map.welcome ?? '',
+        flower_message: map.flower_message ?? '',
       }
     },
     async getTimeline() {
