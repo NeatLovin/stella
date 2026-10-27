@@ -106,11 +106,7 @@ export function Jar() {
   ]
 
   return (
-    <Page
-      wide
-      title="Le bocal"
-      intro="Une raison par jour. Et d’autres, quand tu en as besoin."
-    >
+    <Page wide title="Le bocal" intro="Une raison par jour. Et d’autres, quand tu en as besoin.">
       <div role="tablist" aria-label="Choisir le bocal" className="glass -mt-2 mb-8 inline-flex rounded-full p-1">
         {tabs.map((t) => (
           <button
@@ -150,9 +146,11 @@ function EmptyJar({ author, owner, actions }: { author: ReasonAuthor; owner: str
     <div className="flex flex-col items-center text-center">
       <JarArt count={0} author={author} />
       <p className="mt-6 max-w-[30ch] text-mist">Ce bocal attend encore la première raison de {owner}.</p>
-      <button type="button" className="btn-primary mt-5" onClick={() => setWriting(true)}>
-        Écrire la première raison
-      </button>
+      {author === 'her' && (
+        <button type="button" className="btn-primary mt-5" onClick={() => setWriting(true)}>
+          Écrire la première raison
+        </button>
+      )}
       <ReasonEditor open={writing} onClose={() => setWriting(false)} onSave={actions.add} />
     </div>
   )
@@ -165,6 +163,8 @@ function JarContent({ reasons, author, actions }: { reasons: Reason[]; author: R
   const current = reasons.find((r) => r.id === currentId) ?? today
   const [writing, setWriting] = useState(false)
   const [managing, setManaging] = useState(false)
+  // Écrire et tout voir : seulement dans le bocal de Sarah (le sien garde ses surprises)
+  const canEdit = author === 'her'
   // Favoris : mis à jour tout de suite à l'écran, puis enregistrés
   const [fav, setFav] = useState<Record<string, boolean>>({})
   const [favError, setFavError] = useState<string | null>(null)
@@ -240,28 +240,33 @@ function JarContent({ reasons, author, actions }: { reasons: Reason[]; author: R
             onClick={() => setShowFavs(true)}
           >
             <IconHeart width={16} height={16} filled={favorites.length > 0} className="text-rose" />
-            Préférées{favorites.length > 0 ? ` (${favorites.length})` : ''}
+            {canEdit ? 'Préférées' : 'Mes préférées'}
+            {favorites.length > 0 ? ` (${favorites.length})` : ''}
           </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
-            onClick={() => setWriting(true)}
-          >
-            <span aria-hidden className="text-glow">
-              ✎
-            </span>{' '}
-            Écrire une raison
-          </button>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
-            onClick={() => setManaging(true)}
-          >
-            <span aria-hidden className="text-glow">
-              ☰
-            </span>{' '}
-            Tout voir
-          </button>
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
+                onClick={() => setWriting(true)}
+              >
+                <span aria-hidden className="text-glow">
+                  ✎
+                </span>{' '}
+                Écrire une raison
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
+                onClick={() => setManaging(true)}
+              >
+                <span aria-hidden className="text-glow">
+                  ☰
+                </span>{' '}
+                Tout voir
+              </button>
+            </>
+          )}
         </div>
         {favError && (
           <p role="alert" className="mt-1 text-center text-sm text-rose">
