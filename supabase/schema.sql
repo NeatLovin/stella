@@ -36,6 +36,8 @@ create table if not exists public.reasons (
   created_at timestamptz not null default now()
 );
 alter table public.reasons add column if not exists favorite boolean not null default false;
+-- 'him' = ses raisons à lui pour elle, 'her' = ses raisons à elle pour lui
+alter table public.reasons add column if not exists author text not null default 'him' check (author in ('him', 'her'));
 
 -- Mur de photos (page « Nous »)
 create table if not exists public.photos (

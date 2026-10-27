@@ -1,5 +1,5 @@
 // Données fictives en mémoire pour développer sans Supabase (npm run demo, mot de passe « demo »).
-import type { Api, Photo, Reason, TimelineEvent, WishlistItem } from './api'
+import type { Api, Photo, Reason, ReasonAuthor, TimelineEvent, WishlistItem } from './api'
 import type { Ovulation, Period } from './cycle'
 import { plusDays, todayISO } from './dates'
 
@@ -40,12 +40,20 @@ export function createDemoApi(): Api {
     song_url: null,
   })) as TimelineEvent[]
 
-  const reasons: Reason[] = [
-    'Première raison de démonstration.',
-    'Deuxième raison, un peu plus longue, pour voir comment le texte se répartit sur plusieurs lignes.',
-    'Troisième raison de démonstration.',
-    'Quatrième raison de démonstration.',
-  ].map((text) => ({ id: uid(), text, favorite: false }))
+  let reasons: Reason[] = [
+    ...[
+      'Première raison de démonstration.',
+      'Deuxième raison, un peu plus longue, pour voir comment le texte se répartit sur plusieurs lignes.',
+      'Troisième raison de démonstration.',
+      'Quatrième raison de démonstration.',
+    ].map((text) => ({ id: uid(), text, favorite: false, author: 'him' as ReasonAuthor })),
+    ...['Une raison écrite par elle.', 'Une deuxième raison, écrite par elle aussi.'].map((text) => ({
+      id: uid(),
+      text,
+      favorite: false,
+      author: 'her' as ReasonAuthor,
+    })),
+  ]
 
   let wishlist: WishlistItem[] = [
     { id: uid(), name: 'Un plaid', url: 'https://example.com/plaid', image_path: null, created_at: new Date().toISOString() },
@@ -117,6 +125,19 @@ export function createDemoApi(): Api {
     async setReasonFavorite(id, favorite) {
       const r = reasons.find((x) => x.id === id)
       if (r) r.favorite = favorite
+    },
+    async addReason(text, author) {
+      await wait()
+      const r: Reason = { id: uid(), text, favorite: false, author }
+      reasons.push(r)
+      return { ...r }
+    },
+    async updateReason(id, text) {
+      const r = reasons.find((x) => x.id === id)
+      if (r) r.text = text
+    },
+    async deleteReason(id) {
+      reasons = reasons.filter((r) => r.id !== id)
     },
     async getWishlist() {
       await wait()

@@ -24,10 +24,14 @@ export interface TimelineEvent {
   song_url: string | null
 }
 
+/** Qui a écrit la raison : lui (pour elle) ou elle (pour lui) */
+export type ReasonAuthor = 'him' | 'her'
+
 export interface Reason {
   id: string
   text: string
   favorite: boolean
+  author: ReasonAuthor
 }
 
 export interface Photo {
@@ -59,6 +63,9 @@ export interface Api {
   setEventSong(id: string, song_url: string | null): Promise<void>
   getReasons(): Promise<Reason[]>
   setReasonFavorite(id: string, favorite: boolean): Promise<void>
+  addReason(text: string, author: ReasonAuthor): Promise<Reason>
+  updateReason(id: string, text: string): Promise<void>
+  deleteReason(id: string): Promise<void>
 
   getPhotos(): Promise<Photo[]>
   addPhoto(image_path: string, caption: string | null): Promise<void>
@@ -143,10 +150,19 @@ function createSupabaseApi(): Api {
       await sb.storage.from(BUCKET).remove([photo.image_path])
     },
     async getReasons() {
-      return check(await sb.from('reasons').select('id, text, favorite').order('created_at')) as Reason[]
+      return check(await sb.from('reasons').select('id, text, favorite, author').order('created_at')) as Reason[]
     },
     async setReasonFavorite(id, favorite) {
       check(await sb.from('reasons').update({ favorite }).eq('id', id))
+    },
+    async addReason(text, author) {
+      return check(await sb.from('reasons').insert({ text, author }).select('id, text, favorite, author').single()) as Reason
+    },
+    async updateReason(id, text) {
+      check(await sb.from('reasons').update({ text }).eq('id', id))
+    },
+    async deleteReason(id) {
+      check(await sb.from('reasons').delete().eq('id', id))
     },
 
     async getWishlist() {
