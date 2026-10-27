@@ -109,7 +109,7 @@ export function Jar() {
     <Page
       wide
       title="Le bocal"
-      intro={author === 'him' ? 'Une raison par jour. Et d’autres, quand tu en as besoin.' : `Les raisons de ${her}, rien que pour ${him}.`}
+      intro="Une raison par jour. Et d’autres, quand tu en as besoin."
     >
       <div role="tablist" aria-label="Choisir le bocal" className="glass -mt-2 mb-8 inline-flex rounded-full p-1">
         {tabs.map((t) => (
