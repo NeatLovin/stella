@@ -4,7 +4,7 @@
  * - Données (Supabase REST / Auth) : jamais interceptées ici (gérées par l'application).
  */
 const APP_CACHE = 'stella-app-v1'
-const PHOTO_CACHE = 'stella-photos-v1'
+const PHOTO_CACHE = 'stella-photos-v2' // v2 : vide les erreurs gardées par erreur en v1
 const KEEP = [APP_CACHE, PHOTO_CACHE]
 
 self.addEventListener('install', (event) => {
@@ -40,14 +40,17 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return
   const url = new URL(req.url)
 
-  // Photos : cache d'abord (les fichiers ne changent jamais pour un même chemin)
+  // Photos : cache d'abord (les fichiers ne changent jamais pour un même chemin).
+  // Demandées en CORS pour pouvoir lire le statut : seules les vraies photos (200) sont gardées,
+  // jamais une erreur de lien expiré.
   if (isPhoto(url)) {
     event.respondWith(
       caches.open(PHOTO_CACHE).then(async (c) => {
         const hit = await c.match(photoKey(url))
         if (hit) return hit
-        const res = await fetch(req)
-        if (res.ok || res.type === 'opaque') c.put(photoKey(url), res.clone()).catch(() => {})
+        const res = await fetch(req.url, { mode: 'cors', credentials: 'omit' })
+        const type = res.headers.get('content-type') || ''
+        if (res.ok && type.startsWith('image/')) c.put(photoKey(url), res.clone()).catch(() => {})
         return res
       }),
     )
