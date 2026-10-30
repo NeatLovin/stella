@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
-import { IconExternal, IconGift, IconImage, IconPlus } from '../components/icons'
+import { IconCheck, IconExternal, IconGift, IconImage, IconPlus } from '../components/icons'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
 import { useLoad } from '../hooks/useLoad'
 import { useImageUrls } from '../hooks/useImageUrls'
@@ -10,7 +10,40 @@ import { compressImage } from '../lib/image'
 type Editing = { mode: 'new' } | { mode: 'edit'; item: WishlistItem }
 
 export function Wishlist() {
-  const { data, error, loading, reload } = useLoad(api.getWishlist, 'wishlist')
+  const { data, error, loading, reload, setData } = useLoad(api.getWishlist, 'wishlist')
+  const [toggleError, setToggleError] = useState<string | null>(null)
+  const wanted = (data ?? []).filter((w) => !w.offered)
+  const offered = (data ?? []).filter((w) => w.offered)
+
+  // Barré tout de suite à l'écran, puis enregistré (annulé si l'enregistrement échoue)
+  const toggleOffered = async (item: WishlistItem) => {
+    const next = !item.offered
+    const apply = (v: boolean) => setData((d) => (d ?? []).map((w) => (w.id === item.id ? { ...w, offered: v } : w)))
+    apply(next)
+    setToggleError(null)
+    try {
+      await api.setWishOffered(item.id, next)
+      void reload()
+    } catch (e) {
+      apply(!next)
+      setToggleError(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const grid = (items: WishlistItem[]) => (
+    <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10 xl:grid-cols-5">
+      {items.map((item) => (
+        <li key={item.id}>
+          <WishCard
+            item={item}
+            src={item.image_path ? urls[item.image_path] : undefined}
+            onEdit={() => setEditing({ mode: 'edit', item })}
+            onToggle={() => void toggleOffered(item)}
+          />
+        </li>
+      ))}
+    </ul>
+  )
   const urls = useImageUrls((data ?? []).map((w) => w.image_path))
   const [editing, setEditing] = useState<Editing | null>(null)
 
@@ -31,18 +64,20 @@ export function Wishlist() {
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">Ta wishlist est vide. Ajoute ta première envie avec le bouton ci-dessus.</p>}
 
-      {data && data.length > 0 && (
-        <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10 xl:grid-cols-5">
-          {data.map((item) => (
-            <li key={item.id}>
-              <WishCard
-                item={item}
-                src={item.image_path ? urls[item.image_path] : undefined}
-                onEdit={() => setEditing({ mode: 'edit', item })}
-              />
-            </li>
-          ))}
-        </ul>
+      {toggleError && (
+        <p role="alert" className="mb-4 text-sm text-rose">
+          Impossible d’enregistrer : {toggleError}
+        </p>
+      )}
+      {data && data.length > 0 && wanted.length === 0 && <p className="text-mist">Toutes tes envies ont été offertes ✦</p>}
+      {wanted.length > 0 && grid(wanted)}
+      {offered.length > 0 && (
+        <section className="mt-14" aria-labelledby="wish-offered">
+          <h2 id="wish-offered" className="font-display mb-5 text-2xl text-mist">
+            Déjà offerts <span className="text-base tabular-nums">({offered.length})</span>
+          </h2>
+          {grid(offered)}
+        </section>
       )}
 
       <BottomSheet open={Boolean(editing)} onClose={close} label={editing?.mode === 'edit' ? 'Modifier l’envie' : 'Nouvelle envie'}>
@@ -60,11 +95,16 @@ export function Wishlist() {
   )
 }
 
-function WishCard({ item, src, onEdit }: { item: WishlistItem; src?: string; onEdit: () => void }) {
+function WishCard({ item, src, onEdit, onToggle }: { item: WishlistItem; src?: string; onEdit: () => void; onToggle: () => void }) {
+  const done = Boolean(item.offered)
   return (
-    <article className="group">
+    <article className="group relative">
       <button type="button" onClick={onEdit} className="block w-full text-left" aria-label={`Modifier ${item.name}`}>
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-glow/15 bg-dusk/60">
+        <div
+          className={`relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-glow/15 bg-dusk/60 transition-[filter,opacity] duration-300 ${
+            done ? 'opacity-55 grayscale' : ''
+          }`}
+        >
           {src ? (
             <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
           ) : (
@@ -73,7 +113,24 @@ function WishCard({ item, src, onEdit }: { item: WishlistItem; src?: string; onE
             </div>
           )}
         </div>
-        <h2 className="mt-3 line-clamp-2 leading-snug">{item.name}</h2>
+        <h2 className={`mt-3 line-clamp-2 leading-snug ${done ? 'text-mist line-through decoration-glow/80 decoration-2' : ''}`}>
+          {item.name}
+          {done && <span className="sr-only"> (déjà offert)</span>}
+        </h2>
+      </button>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={done}
+        aria-label={done ? `Remettre ${item.name} dans les envies` : `Marquer ${item.name} comme offert`}
+        title={done ? 'Remettre dans les envies' : 'Déjà offert'}
+        className={`absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur transition-colors ${
+          done
+            ? 'border-glow bg-electric text-white shadow-[0_0_16px_rgba(46,91,255,.6)]'
+            : 'border-white/25 bg-night/55 text-mist hover:text-starlight'
+        }`}
+      >
+        <IconCheck width={20} height={20} />
       </button>
       {item.url && (
         <a

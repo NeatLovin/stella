@@ -55,6 +55,8 @@ create table if not exists public.wishlist_items (
   image_path text,
   created_at timestamptz not null default now()
 );
+-- Cadeau déjà offert / acheté (barré dans la wishlist)
+alter table public.wishlist_items add column if not exists offered boolean not null default false;
 
 -- Cycle
 create table if not exists public.periods (

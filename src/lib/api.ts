@@ -49,6 +49,8 @@ export interface WishlistItem {
   url: string | null
   image_path: string | null
   created_at: string
+  /** Déjà offert ou acheté : barré et rangé en bas de la liste */
+  offered?: boolean
 }
 
 export type WishlistInput = { name: string; url: string | null; image_path: string | null }
@@ -77,6 +79,7 @@ export interface Api {
   addWish(input: WishlistInput): Promise<void>
   updateWish(id: string, input: WishlistInput): Promise<void>
   deleteWish(item: WishlistItem): Promise<void>
+  setWishOffered(id: string, offered: boolean): Promise<void>
   uploadImage(blob: Blob, folder?: 'wishlist' | 'timeline' | 'photos'): Promise<string>
   deleteImage(path: string): Promise<void>
   imageUrls(paths: string[]): Promise<Record<string, string>>
@@ -176,6 +179,9 @@ function createSupabaseApi(): Api {
     },
     async updateWish(id, input) {
       check(await sb.from('wishlist_items').update(input).eq('id', id))
+    },
+    async setWishOffered(id, offered) {
+      check(await sb.from('wishlist_items').update({ offered }).eq('id', id))
     },
     async deleteWish(item) {
       check(await sb.from('wishlist_items').delete().eq('id', item.id))

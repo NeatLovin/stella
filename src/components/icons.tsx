@@ -50,6 +50,12 @@ export const IconMoon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const IconCheck = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="m5 12.5 4.2 4.2L19 7" />
+  </svg>
+)
+
 export const IconPlus = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="M12 5v14M5 12h14" />

@@ -150,6 +150,9 @@ export function createDemoApi(): Api {
     async updateWish(id, input) {
       wishlist = wishlist.map((w) => (w.id === id ? { ...w, ...input } : w))
     },
+    async setWishOffered(id, offered) {
+      wishlist = wishlist.map((w) => (w.id === id ? { ...w, offered } : w))
+    },
     async deleteWish(item) {
       wishlist = wishlist.filter((w) => w.id !== item.id)
     },
