@@ -244,29 +244,27 @@ function JarContent({ reasons, author, actions }: { reasons: Reason[]; author: R
             {favorites.length > 0 ? ` (${favorites.length})` : ''}
           </button>
           {canEdit && (
-            <>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
-                onClick={() => setWriting(true)}
-              >
-                <span aria-hidden className="text-glow">
-                  ✎
-                </span>{' '}
-                Écrire une raison
-              </button>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
-                onClick={() => setManaging(true)}
-              >
-                <span aria-hidden className="text-glow">
-                  ☰
-                </span>{' '}
-                Tout voir
-              </button>
-            </>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
+              onClick={() => setWriting(true)}
+            >
+              <span aria-hidden className="text-glow">
+                ✎
+              </span>{' '}
+              Écrire une raison
+            </button>
           )}
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 py-2 text-sm text-mist hover:text-starlight"
+            onClick={() => setManaging(true)}
+          >
+            <span aria-hidden className="text-glow">
+              ☰
+            </span>{' '}
+            Tout voir
+          </button>
         </div>
         {favError && (
           <p role="alert" className="mt-1 text-center text-sm text-rose">
@@ -276,7 +274,15 @@ function JarContent({ reasons, author, actions }: { reasons: Reason[]; author: R
       </div>
 
       <ReasonEditor open={writing} onClose={() => setWriting(false)} onSave={actions.add} />
-      <ManageReasons open={managing} onClose={() => setManaging(false)} reasons={reasons} actions={actions} />
+      <ManageReasons
+        open={managing}
+        onClose={() => setManaging(false)}
+        reasons={reasons}
+        actions={actions}
+        canEdit={canEdit}
+        isFav={isFav}
+        onToggleFav={(r) => void toggleFav(r)}
+      />
 
       <BottomSheet open={showFavs} onClose={() => setShowFavs(false)} label="Mes raisons préférées">
         <h2 className="font-display text-3xl font-medium">Mes préférées</h2>
@@ -447,17 +453,23 @@ function ReasonEditor({
   )
 }
 
-/** Liste complète d'un bocal : corriger ou retirer une raison. */
+/** Liste complète d'un bocal : cœur pour les préférées ; corriger ou retirer (bocal de Sarah seulement). */
 function ManageReasons({
   open,
   onClose,
   reasons,
   actions,
+  canEdit,
+  isFav,
+  onToggleFav,
 }: {
   open: boolean
   onClose: () => void
   reasons: Reason[]
   actions: JarActions
+  canEdit: boolean
+  isFav: (r: Reason) => boolean
+  onToggleFav: (r: Reason) => void
 }) {
   const [editing, setEditing] = useState<Reason | null>(null)
   const [confirm, setConfirm] = useState<string | null>(null)
@@ -484,9 +496,10 @@ function ManageReasons({
         )}
         <ul className="mt-5 space-y-3">
           {reasons.map((r) => (
-            <li key={r.id} className="rounded-[1rem] border border-glow/15 bg-starlight/[0.04] px-5 py-4">
+            <li key={r.id} className="relative rounded-[1rem] border border-glow/15 bg-starlight/[0.04] py-4 pr-14 pl-5">
               <p className="font-display text-[1.2rem] leading-snug">{r.text}</p>
-              {confirm === r.id ? (
+              <FavButton active={isFav(r)} onToggle={() => onToggleFav(r)} />
+              {!canEdit ? null : confirm === r.id ? (
                 <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
                   <span className="text-mist">Retirer cette raison du bocal ?</span>
                   <button type="button" className="rounded-full bg-rose/90 px-4 py-1.5 text-white" onClick={() => void remove(r.id)}>
