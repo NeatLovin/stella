@@ -12,8 +12,6 @@ type Editing = { mode: 'new' } | { mode: 'edit'; item: WishlistItem }
 export function Wishlist() {
   const { data, error, loading, reload, setData } = useLoad(api.getWishlist, 'wishlist')
   const [toggleError, setToggleError] = useState<string | null>(null)
-  const wanted = (data ?? []).filter((w) => !w.offered)
-  const offered = (data ?? []).filter((w) => w.offered)
 
   // Barré tout de suite à l'écran, puis enregistré (annulé si l'enregistrement échoue)
   const toggleOffered = async (item: WishlistItem) => {
@@ -69,16 +67,7 @@ export function Wishlist() {
           Impossible d’enregistrer : {toggleError}
         </p>
       )}
-      {data && data.length > 0 && wanted.length === 0 && <p className="text-mist">Toutes tes envies ont été offertes ✦</p>}
-      {wanted.length > 0 && grid(wanted)}
-      {offered.length > 0 && (
-        <section className="mt-14" aria-labelledby="wish-offered">
-          <h2 id="wish-offered" className="font-display mb-5 text-2xl text-mist">
-            Déjà offerts <span className="text-base tabular-nums">({offered.length})</span>
-          </h2>
-          {grid(offered)}
-        </section>
-      )}
+      {data && data.length > 0 && grid(data)}
 
       <BottomSheet open={Boolean(editing)} onClose={close} label={editing?.mode === 'edit' ? 'Modifier l’envie' : 'Nouvelle envie'}>
         {editing && (
