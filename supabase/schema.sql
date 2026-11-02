@@ -58,6 +58,12 @@ create table if not exists public.wishlist_items (
 -- Cadeau déjà offert / acheté (barré dans la wishlist)
 alter table public.wishlist_items add column if not exists offered boolean not null default false;
 
+-- Messages des jalons (clé : 'months-4', 'days-100', 'years-1'…)
+create table if not exists public.milestone_messages (
+  key     text primary key,
+  message text not null
+);
+
 -- Cycle
 create table if not exists public.periods (
   id         uuid primary key default gen_random_uuid(),
@@ -78,7 +84,7 @@ create table if not exists public.ovulations (
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos']
+  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "authenticated full access" on public.%I', t);

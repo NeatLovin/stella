@@ -1,13 +1,15 @@
 import { differenceInCalendarDays, intervalToDuration } from 'date-fns'
 import { motion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
 import { Games } from '../components/Games'
 import { LilyEgg } from '../components/LilyEgg'
+import { MilestoneCelebration } from '../components/MilestoneCelebration'
 import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery'
-import { formatLong, parse } from '../lib/dates'
+import { formatLong, parse, toISO } from '../lib/dates'
+import { milestoneOn, nextMilestone } from '../lib/milestones'
 
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one)
 
@@ -18,6 +20,7 @@ export function Home() {
   const [now, setNow] = useState(() => new Date())
   // Surprise cachée : taper plusieurs fois d'affilée sur son prénom fait éclore le lys
   const [lily, setLily] = useState(false)
+  const [party, setParty] = useState(false)
   const [bump, setBump] = useState(0)
   const taps = useRef<number[]>([])
   const tapName = () => {
@@ -41,6 +44,9 @@ export function Home() {
   const months = d.months ?? 0
   const days = d.days ?? 0
   const dayNumber = differenceInCalendarDays(now, start) + 1
+  const today = toISO(now)
+  const todayMilestone = useMemo(() => milestoneOn(couple_start, today), [couple_start, today])
+  const upcoming = useMemo(() => nextMilestone(couple_start, today), [couple_start, today])
 
   const rows = [
     years > 0 && { n: years, unit: plural(years, 'an', 'ans') },
@@ -104,6 +110,22 @@ export function Home() {
               <sup>e</sup> jour ensemble
             </span>
           </p>
+          {todayMilestone ? (
+            <button
+              type="button"
+              onClick={() => setParty(true)}
+              className="mt-2 self-start text-sm text-gold underline-offset-4 hover:underline"
+            >
+              Aujourd’hui : {todayMilestone.n} {todayMilestone.label} ✦
+            </button>
+          ) : (
+            upcoming &&
+            upcoming.inDays <= 14 && (
+              <p className="mt-2 text-sm text-mist/80">
+                {upcoming.milestone.n} {upcoming.milestone.label} {upcoming.inDays === 1 ? 'demain' : `dans ${upcoming.inDays} jours`}
+              </p>
+            )
+          )}
           {welcome && (
             <button type="button" onClick={showWelcome} className="mt-3 self-start text-sm text-glow underline-offset-4 hover:underline">
               Relire mon mot
@@ -120,6 +142,7 @@ export function Home() {
         )}
       </motion.section>
       <LilyEgg open={lily} onClose={() => setLily(false)} />
+      {todayMilestone && <MilestoneCelebration milestone={todayMilestone} open={party} onClose={() => setParty(false)} />}
     </Page>
   )
 }

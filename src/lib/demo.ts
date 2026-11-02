@@ -88,6 +88,10 @@ export function createDemoApi(): Api {
       signedIn = false
       emit()
     },
+    async getMilestoneMessage(key) {
+      await wait()
+      return key.startsWith('days') ? 'Message de démonstration pour ce jalon.\n\nDeuxième paragraphe.' : null
+    },
     async getSettings() {
       return {
         her_name: 'Elle',

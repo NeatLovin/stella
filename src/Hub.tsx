@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { MilestoneCelebration, milestoneSeen } from './components/MilestoneCelebration'
 import { Loading } from './components/Page'
 import { TabBar } from './components/TabBar'
 import { WaterReminder } from './components/WaterReminder'
@@ -8,6 +9,8 @@ import { clearWelcomeFlag, hasWelcomeFlag, Welcome } from './components/Welcome'
 import { SettingsContext, WelcomeContext } from './context'
 import { useLoad } from './hooks/useLoad'
 import { api } from './lib/api'
+import { todayISO, type ISODate } from './lib/dates'
+import { milestoneOn } from './lib/milestones'
 import { Cycle } from './pages/Cycle'
 import { Home } from './pages/Home'
 import { Jar } from './pages/Jar'
@@ -37,10 +40,19 @@ export default function Hub() {
           <TabBar />
           <WaterReminder sponsor={settings.his_name} />
           <AnimatedRoutes />
+          <MilestoneAuto start={settings.couple_start} />
         </HashRouter>
       </WelcomeContext.Provider>
     </SettingsContext.Provider>
   )
+}
+
+/** Le jour d'un jalon, la fête s'ouvre toute seule (une fois par appareil). */
+function MilestoneAuto({ start }: { start: ISODate }) {
+  const m = useMemo(() => milestoneOn(start, todayISO()), [start])
+  const [open, setOpen] = useState(() => Boolean(m && !milestoneSeen(m)))
+  if (!m) return null
+  return <MilestoneCelebration milestone={m} open={open} onClose={() => setOpen(false)} />
 }
 
 const ORDER = ['/', '/timeline', '/bocal', '/wishlist', '/cycle']

@@ -62,6 +62,8 @@ export interface Api {
   signOut(): Promise<void>
 
   getSettings(): Promise<Settings>
+  /** Message écrit pour un jalon ('days-100', 'months-4', 'years-1'…), ou null */
+  getMilestoneMessage(key: string): Promise<string | null>
   getTimeline(): Promise<TimelineEvent[]>
   setEventImage(id: string, image_path: string | null): Promise<void>
   setEventSong(id: string, song_url: string | null): Promise<void>
@@ -125,6 +127,10 @@ function createSupabaseApi(): Api {
       await sb.auth.signOut()
     },
 
+    async getMilestoneMessage(key) {
+      const rows = check(await sb.from('milestone_messages').select('message').eq('key', key).limit(1)) as { message: string }[]
+      return rows[0]?.message ?? null
+    },
     async getSettings() {
       const rows = check(await sb.from('settings').select('key, value')) as { key: string; value: string }[]
       const map = Object.fromEntries(rows.map((r) => [r.key, r.value]))
