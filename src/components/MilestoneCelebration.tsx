@@ -36,8 +36,15 @@ export function MilestoneCelebration({ milestone, open, onClose }: { milestone: 
   useEffect(() => {
     if (!open) return
     document.body.dataset.playing = '1'
+    // La page derrière ne défile plus : une seule barre de défilement, celle de la fête si besoin
+    const html = document.documentElement
+    const prev = [html.style.overflow, document.body.style.overflow]
+    html.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
     return () => {
       delete document.body.dataset.playing
+      html.style.overflow = prev[0]
+      document.body.style.overflow = prev[1]
     }
   }, [open])
 

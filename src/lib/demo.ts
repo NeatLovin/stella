@@ -99,7 +99,8 @@ export function createDemoApi(): Api {
         couple_start: '2026-06-20',
         welcome:
           'Premier paragraphe du mot d’accueil.\n\nDeuxième paragraphe, un peu plus long pour voir comment le texte respire sur plusieurs lignes.\n\nTroisième paragraphe.',
-        flower_message: 'Premier paragraphe de la carte.\n\nDeuxième paragraphe de démonstration, un peu plus long.\n\nFin.',
+        flower_message:
+          'Premier paragraphe de démonstration, assez court pour une phrase d’ouverture.\n\nDeuxième paragraphe de démonstration, plus long, pour vérifier que la carte tient sur un seul écran même quand le texte s’étire sur plusieurs lignes et prend de la place.\n\nTroisième paragraphe de démonstration, lui aussi assez long, avec quelques mots de plus pour approcher la longueur d’une vraie carte écrite à la main, et voir si tout reste lisible.\n\nFin.',
       }
     },
     async getTimeline() {

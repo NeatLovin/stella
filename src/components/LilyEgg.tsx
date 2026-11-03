@@ -34,8 +34,15 @@ export function LilyEgg({ open, onClose }: { open: boolean; onClose: () => void 
   useEffect(() => {
     if (!open) return
     document.body.dataset.playing = '1'
+    // La page derrière ne défile plus : un seul écran, sans barre de défilement en double
+    const html = document.documentElement
+    const prev = [html.style.overflow, document.body.style.overflow]
+    html.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
     return () => {
       delete document.body.dataset.playing
+      html.style.overflow = prev[0]
+      document.body.style.overflow = prev[1]
     }
   }, [open])
 
@@ -48,7 +55,7 @@ export function LilyEgg({ open, onClose }: { open: boolean; onClose: () => void 
           role="dialog"
           aria-modal
           aria-label="Un lys pour toi"
-          className="fixed inset-0 z-[65] overflow-y-auto bg-night outline-none"
+          className="fixed inset-0 z-[65] overflow-hidden bg-night outline-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -65,6 +72,7 @@ export function LilyEgg({ open, onClose }: { open: boolean; onClose: () => void 
 function Bloom({ onClose }: { onClose: () => void }) {
   const { her_name, flower_message } = useSettings()
   const canvas = useRef<HTMLCanvasElement>(null)
+  const area = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<LilyData | null>(null)
   const [failed, setFailed] = useState(false)
   const [done, setDone] = useState(false)
@@ -84,12 +92,18 @@ function Bloom({ onClose }: { onClose: () => void }) {
     let raf = 0
     let start = 0
 
+    let cur = 0
+    // La fleur prend la plus grande taille qui tient dans l'espace libre (largeur et hauteur)
     const layout = () => {
-      const w = cv.clientWidth
+      const box = area.current!
+      const cell = Math.max(1, Math.min(box.clientWidth / data.cols, box.clientHeight / (data.rows * CELL_RATIO)))
+      const w = cell * data.cols
+      const h = cell * CELL_RATIO * data.rows
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const cell = w / data.cols
+      cv.style.width = `${w}px`
+      cv.style.height = `${h}px`
       cv.width = Math.round(w * dpr)
-      cv.height = Math.round(cell * CELL_RATIO * data.rows * dpr)
+      cv.height = Math.round(h * dpr)
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       // taille de police qui fait tomber chaque caractère exactement dans sa case
       ctx.font = '100px ui-monospace, SFMono-Regular, Menlo, Consolas, "DejaVu Sans Mono", monospace'
@@ -99,6 +113,7 @@ function Bloom({ onClose }: { onClose: () => void }) {
     let geo = layout()
 
     const draw = (i: number) => {
+      cur = i
       const [chars, levels] = data.frames[i]
       const rowH = geo.cell * CELL_RATIO
       ctx.clearRect(0, 0, cv.width, cv.height)
@@ -138,22 +153,37 @@ function Bloom({ onClose }: { onClose: () => void }) {
       raf = requestAnimationFrame(loop)
     }
 
-    const onResize = () => {
+    // Redessine à la bonne taille quand l'écran tourne ou quand la carte s'ouvre
+    const observer = new ResizeObserver(() => {
       geo = layout()
-      draw(last)
-    }
-    window.addEventListener('resize', onResize)
+      draw(cur)
+    })
+    observer.observe(area.current!)
     return () => {
       cancelAnimationFrame(raf)
-      window.removeEventListener('resize', onResize)
+      observer.disconnect()
     }
   }, [data, run])
 
   const paragraphs = flower_message.split(/\n\s*\n/).filter(Boolean)
 
   return (
-    <div className="flex min-h-full flex-col items-center px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <div className="flex w-full justify-end">
+    <div className="flex h-full flex-col items-center px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="flex w-full flex-none items-center justify-between">
+        {done ? (
+          <button
+            type="button"
+            onClick={() => {
+              setCard(false)
+              setRun((r) => r + 1)
+            }}
+            className="py-2 text-sm text-mist hover:text-starlight"
+          >
+            Refaire éclore
+          </button>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
           onClick={onClose}
@@ -164,21 +194,16 @@ function Bloom({ onClose }: { onClose: () => void }) {
         </button>
       </div>
 
-      <div className="relative mt-2 w-full max-w-[40rem]">
-        <canvas
-          ref={canvas}
-          role="img"
-          aria-label="Un lys blanc, dessiné avec des lettres, qui s’ouvre"
-          className="lily-glow block w-full"
-        />
-        {!data && !failed && <p className="py-24 text-center text-mist">…</p>}
-        {failed && <p className="py-24 text-center text-mist">La fleur n’a pas pu s’ouvrir. Réessaie avec du réseau.</p>}
+      <div ref={area} className="relative flex min-h-0 w-full max-w-[40rem] flex-1 items-center justify-center">
+        <canvas ref={canvas} role="img" aria-label="Un lys blanc, dessiné avec des lettres, qui s’ouvre" className="lily-glow block" />
+        {!data && !failed && <p className="absolute text-mist">…</p>}
+        {failed && <p className="absolute px-6 text-center text-mist">La fleur n’a pas pu s’ouvrir. Réessaie avec du réseau.</p>}
       </div>
 
       <AnimatePresence>
         {done && paragraphs.length > 0 && (
           <motion.div
-            className="mt-4 w-full max-w-[34rem]"
+            className="mt-3 w-full max-w-[34rem] flex-none"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -192,26 +217,13 @@ function Bloom({ onClose }: { onClose: () => void }) {
                 Pour {her_name || 'toi'} <span className="text-glow not-italic">✦</span>
               </button>
             ) : (
-              <div className="glass rounded-3xl px-6 py-6 lg:px-9 lg:py-8">
+              <div className="glass max-h-[62dvh] overflow-y-auto rounded-3xl px-5 py-4 lg:px-8 lg:py-6">
                 <TypedMessage paragraphs={paragraphs} />
               </div>
             )}
           </motion.div>
         )}
       </AnimatePresence>
-
-      {done && (
-        <button
-          type="button"
-          onClick={() => {
-            setCard(false)
-            setRun((r) => r + 1)
-          }}
-          className="mt-5 py-2 text-sm text-mist hover:text-starlight"
-        >
-          Refaire éclore
-        </button>
-      )}
     </div>
   )
 }
@@ -231,10 +243,10 @@ function TypedMessage({ paragraphs }: { paragraphs: string[] }) {
 
   const shown = full.slice(0, n).split('\n\n')
   return (
-    <div className="font-display space-y-4 text-[1.3rem] leading-relaxed lg:text-[1.45rem]">
+    <div className="font-display space-y-[0.6em] text-[clamp(0.98rem,0.45rem+1.45vh,1.32rem)] leading-snug">
       {/* Texte complet pour les lecteurs d'écran, la version animée est décorative */}
       <p className="sr-only">{full}</p>
-      <div aria-hidden className="space-y-4">
+      <div aria-hidden className="space-y-[0.6em]">
         {shown.map((p, i) => (
           <p key={i}>
             {p}
