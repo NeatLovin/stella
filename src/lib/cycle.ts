@@ -127,6 +127,54 @@ export function markDay(day: ISODate, periods: Period[], ovulations: Ovulation[]
   return null
 }
 
+export interface PastCycle {
+  start: ISODate
+  /** Durée du cycle en jours (jusqu'aux règles suivantes) */
+  length: number
+  /** Durée des règles notée, ou null si la fin n'a pas été notée */
+  periodLength: number | null
+  /** Hors des bornes habituelles (21-45 j) : affiché mais pas compté dans la moyenne */
+  outlier: boolean
+}
+
+export interface CycleHistory {
+  cycles: PastCycle[]
+  avgCycle: number
+  avgPeriod: number
+  /** Écart entre le cycle le plus court et le plus long parmi ceux comptés (null si moins de 2) */
+  spread: number | null
+  shortest: number | null
+  longest: number | null
+}
+
+/** Cycles terminés, du plus ancien au plus récent (les `limit` derniers). */
+export function cycleHistory(periods: Period[], today: ISODate, limit = 8): CycleHistory {
+  const past = periods.filter((p) => p.start_date <= today).sort((a, b) => a.start_date.localeCompare(b.start_date))
+  const cycles: PastCycle[] = []
+  for (let i = 0; i + 1 < past.length; i++) {
+    const length = diffDays(past[i + 1].start_date, past[i].start_date)
+    const end = past[i].end_date
+    cycles.push({
+      start: past[i].start_date,
+      length,
+      periodLength: end ? diffDays(end, past[i].start_date) + 1 : null,
+      outlier: length < 21 || length > 45,
+    })
+  }
+  const shown = cycles.slice(-limit)
+  const counted = shown.filter((c) => !c.outlier).map((c) => c.length)
+  const shortest = counted.length ? Math.min(...counted) : null
+  const longest = counted.length ? Math.max(...counted) : null
+  return {
+    cycles: shown,
+    avgCycle: averageCycleLength(past).length,
+    avgPeriod: averagePeriodLength(past),
+    spread: counted.length >= 2 ? longest! - shortest! : null,
+    shortest,
+    longest,
+  }
+}
+
 export const PHASE_LABEL: Record<Phase, string> = {
   menstruelle: 'Règles',
   folliculaire: 'Phase folliculaire',

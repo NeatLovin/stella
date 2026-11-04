@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averageCycleLength, averagePeriodLength, computeCycle, markDay, type Period } from './cycle'
+import { averageCycleLength, averagePeriodLength, computeCycle, cycleHistory, markDay, type Period } from './cycle'
 
 const p = (start: string, end: string | null = null): Period => ({ id: start, start_date: start, end_date: end })
 
@@ -91,5 +91,25 @@ describe('markDay', () => {
     const s = computeCycle(periods, ovs, '2026-10-10')
     expect(markDay('2026-10-16', periods, ovs, s)).toBe('ovulation')
     expect(markDay('2026-10-15', periods, ovs, s)).toBe(null)
+  })
+})
+
+describe('cycleHistory', () => {
+  it('lists finished cycles with their period length', () => {
+    const h = cycleHistory([p('2026-07-01', '2026-07-05'), p('2026-07-29'), p('2026-08-28', '2026-09-01'), p('2026-09-26')], '2026-10-10')
+    expect(h.cycles.map((c) => c.length)).toEqual([28, 30, 29])
+    expect(h.cycles.map((c) => c.periodLength)).toEqual([5, null, 5])
+    expect(h.avgCycle).toBe(29)
+    expect(h.spread).toBe(2)
+  })
+
+  it('shows outliers without counting them', () => {
+    const h = cycleHistory([p('2026-06-01'), p('2026-06-29'), p('2026-08-30')], '2026-10-10')
+    expect(h.cycles.map((c) => c.outlier)).toEqual([false, true])
+    expect(h.spread).toBeNull()
+  })
+
+  it('is empty with a single period', () => {
+    expect(cycleHistory([p('2026-10-01')], '2026-10-10').cycles).toEqual([])
   })
 })

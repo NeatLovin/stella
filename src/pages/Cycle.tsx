@@ -8,6 +8,7 @@ import { useLoad } from '../hooks/useLoad'
 import { api } from '../lib/api'
 import {
   computeCycle,
+  cycleHistory,
   markDay,
   PHASE_LABEL,
   periodEnd,
@@ -17,6 +18,7 @@ import {
   type Period,
   type Phase,
 } from '../lib/cycle'
+import { dailyTip } from '../lib/cycleTips'
 import { diffDays, formatLong, formatShort, plusDays, toISO, todayISO, type ISODate } from '../lib/dates'
 
 const PHASE_COLOR: Record<Phase, string> = {
@@ -120,6 +122,7 @@ function CycleContent({
                 {ovulationToday ? 'Retirer l’ovulation du jour' : 'Ovulation aujourd’hui'}
               </button>
             </div>
+            <DailyTip state={state} today={today} />
           </>
         )}
 
@@ -133,10 +136,12 @@ function CycleContent({
       <div>
         <Calendar periods={periods} ovulations={ovulations} state={state} today={today} onSelect={setSelectedDay} />
 
+        {state.status === 'ok' && <History periods={periods} state={state} today={today} />}
+
         <p className="mt-8 text-sm leading-relaxed text-mist/80">
           Prévisions indicatives, calculées sur la moyenne de tes derniers cycles
           {state.status === 'ok' && state.usingDefaults ? ' (28 jours par défaut tant qu’il y a moins de 2 cycles)' : ''}. Ce n’est pas une
-          méthode de contraception.
+          méthode de contraception. Les infos du jour sont des repères généraux : chaque corps est différent.
         </p>
       </div>
 
@@ -231,6 +236,106 @@ function Ring({ state }: { state: Extract<CycleState, { status: 'ok' }> }) {
         </p>
       </div>
     </section>
+  )
+}
+
+function DailyTip({ state, today }: { state: Extract<CycleState, { status: 'ok' }>; today: ISODate }) {
+  return (
+    <section aria-label="Info du jour" className="glass mx-auto mt-8 max-w-[26rem] rounded-3xl px-5 py-4">
+      <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase" style={{ color: PHASE_COLOR[state.phase] }}>
+        <span aria-hidden>✦</span> Info du jour
+      </p>
+      <p className="mt-2 leading-relaxed text-starlight/90">{dailyTip(state, today)}</p>
+    </section>
+  )
+}
+
+function History({ periods, state, today }: { periods: Period[]; state: Extract<CycleState, { status: 'ok' }>; today: ISODate }) {
+  const h = useMemo(() => cycleHistory(periods, today), [periods, today])
+  const ongoing = state.phase === 'retard' ? state.cycleLength + state.delay : state.cycleDay
+  const scale = Math.max(35, ...h.cycles.map((c) => c.length), ongoing)
+  const pct = (n: number) => `${(Math.min(n, scale) / scale) * 100}%`
+
+  return (
+    <section className="mt-12" aria-labelledby="cycle-history">
+      <h2 id="cycle-history" className="font-display text-2xl">
+        Historique
+      </h2>
+
+      {h.cycles.length === 0 ? (
+        <p className="mt-3 text-sm text-mist">L’historique apparaîtra dès le début des prochaines règles, avec la durée de chaque cycle.</p>
+      ) : (
+        <>
+          <dl className="mt-4 grid grid-cols-3 gap-3 text-center">
+            <Stat label="Cycle moyen" value={`${h.avgCycle} j`} />
+            <Stat label="Règles" value={`${h.avgPeriod} j`} />
+            <Stat label="Écart" value={h.spread === null ? '–' : `${h.spread} j`} />
+          </dl>
+          {h.spread !== null && (
+            <p className="mt-3 text-sm leading-relaxed text-mist">
+              {h.spread <= 7
+                ? `Cycles réguliers : de ${h.shortest} à ${h.longest} jours.`
+                : `Cycles de ${h.shortest} à ${h.longest} jours. Jusqu’à 7 jours d’écart, on parle de cycles réguliers ; au-delà, c’est fréquent aussi, surtout en période de stress.`}
+            </p>
+          )}
+
+          <ul className="mt-5 space-y-2.5" aria-label="Derniers cycles">
+            {h.cycles.map((c) => (
+              <li key={c.start} className="grid grid-cols-[3.75rem_1fr_4rem] items-center gap-3 text-sm">
+                <span className="text-mist">{formatShort(c.start)}</span>
+                <span
+                  className="relative h-3 overflow-hidden rounded-full bg-starlight/[0.06]"
+                  role="img"
+                  aria-label={`Cycle de ${c.length} jours${c.periodLength ? `, règles de ${c.periodLength} jours` : ''}${c.outlier ? ', hors moyenne' : ''}`}
+                >
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{ width: pct(c.length), background: PHASE_COLOR.folliculaire, opacity: c.outlier ? 0.35 : 0.75 }}
+                  />
+                  <span
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      width: pct(c.periodLength ?? state.periodLength),
+                      background: PHASE_COLOR.menstruelle,
+                      opacity: c.periodLength ? 0.95 : 0.4,
+                    }}
+                  />
+                </span>
+                <span className="text-right tabular-nums">{c.length} j</span>
+              </li>
+            ))}
+            <li className="grid grid-cols-[3.75rem_1fr_4rem] items-center gap-3 text-sm">
+              <span className="text-mist">{formatShort(state.lastStart)}</span>
+              <span
+                className="relative h-3 overflow-hidden rounded-full bg-starlight/[0.06]"
+                role="img"
+                aria-label={`Cycle en cours, jour ${ongoing}`}
+              >
+                <span
+                  className="absolute inset-y-0 left-0 rounded-full border border-dashed"
+                  style={{ width: pct(ongoing), borderColor: PHASE_COLOR.folliculaire }}
+                />
+              </span>
+              <span className="text-right whitespace-nowrap text-mist">en cours</span>
+            </li>
+          </ul>
+          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-xs text-mist">
+            <Legend className="bg-rose" label="Règles" />
+            <Legend className="bg-glow" label="Cycle" />
+            <Legend className="border border-dashed border-glow" label="Cycle en cours" />
+          </ul>
+        </>
+      )}
+    </section>
+  )
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-glow/15 bg-starlight/[0.03] px-2 py-3">
+      <dt className="text-xs text-mist">{label}</dt>
+      <dd className="font-display mt-0.5 text-2xl tabular-nums lining-nums">{value}</dd>
+    </div>
   )
 }
 

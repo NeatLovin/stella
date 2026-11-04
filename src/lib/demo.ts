@@ -64,6 +64,7 @@ export function createDemoApi(): Api {
 
   const today = todayISO()
   let periods: Period[] = [
+    { id: uid(), start_date: plusDays(today, -96), end_date: plusDays(today, -92) },
     { id: uid(), start_date: plusDays(today, -68), end_date: plusDays(today, -64) },
     { id: uid(), start_date: plusDays(today, -39), end_date: plusDays(today, -35) },
     { id: uid(), start_date: plusDays(today, -11), end_date: plusDays(today, -7) },
