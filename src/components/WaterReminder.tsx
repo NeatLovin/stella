@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 import { todayISO } from '../lib/dates'
 
 // Pop-up « pub » qui rappelle de boire de l'eau.
-// Apparaît quelques secondes après l'arrivée sur le site, puis 4 h après « j’i bu », ou 2 h si elle repousse.
+// Apparaît quelques secondes après l'arrivée sur le site, puis 4 h après « j’ai bu », ou 2 h si elle repousse.
 // L'état est propre à chaque téléphone (localStorage), c'est voulu.
 
 const FIRST_DELAY = 5_000
