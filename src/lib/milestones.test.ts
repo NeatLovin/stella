@@ -16,8 +16,9 @@ describe('jalons', () => {
     expect(milestoneOn(START, '2027-03-30')?.key).toBe('months-8')
   })
 
-  it('fête les 100 jours le 7 novembre', () => {
-    const m = milestoneOn(START, '2026-11-07')
+  it('fête les 100 jours le 6 novembre, le 100e jour comme sur l’accueil', () => {
+    const m = milestoneOn(START, '2026-11-06')
+    expect(milestoneOn(START, '2026-11-07')).toBeNull()
     expect(m?.key).toBe('days-100')
     expect(m?.label).toBe('jours ensemble')
   })
@@ -32,7 +33,7 @@ describe('jalons', () => {
   })
 
   it('trouve le prochain jalon', () => {
-    expect(nextMilestone(START, '2026-11-02')).toEqual({ milestone: expect.objectContaining({ key: 'days-100' }), inDays: 5 })
-    expect(nextMilestone(START, '2026-11-07')?.milestone.key).toBe('months-4')
+    expect(nextMilestone(START, '2026-11-02')).toEqual({ milestone: expect.objectContaining({ key: 'days-100' }), inDays: 4 })
+    expect(nextMilestone(START, '2026-11-06')?.milestone.key).toBe('months-4')
   })
 })

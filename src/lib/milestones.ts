@@ -44,7 +44,9 @@ export function milestoneOn(start: ISODate, day: ISODate): Milestone | null {
     const y = months / 12
     return { key: `years-${y}`, kind: 'years', n: y, label: y > 1 ? 'ans ensemble' : 'an ensemble', date: day }
   }
-  if (isDayStep(days)) return { key: `days-${days}`, kind: 'days', n: days, label: 'jours ensemble', date: day }
+  // Comme le compteur de l'accueil, le premier jour compte : le 100e jour, c'est début + 99
+  const dayNumber = days + 1
+  if (isDayStep(dayNumber)) return { key: `days-${dayNumber}`, kind: 'days', n: dayNumber, label: 'jours ensemble', date: day }
   if (onMonth) return { key: `months-${months}`, kind: 'months', n: months, label: 'mois ensemble', date: day }
   return null
 }
