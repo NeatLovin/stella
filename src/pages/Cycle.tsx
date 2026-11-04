@@ -1,6 +1,6 @@
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from 'date-fns'
 import { fr } from 'date-fns/locale'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { IconChevron } from '../components/icons'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
@@ -19,6 +19,16 @@ import {
   type Phase,
 } from '../lib/cycle'
 import { dailyTip } from '../lib/cycleTips'
+import {
+  describePattern,
+  FLOWS,
+  personalTip,
+  recurringPatterns,
+  SYMPTOM_GROUPS,
+  SYMPTOMS,
+  type Pattern,
+  type SymptomEntry,
+} from '../lib/symptoms'
 import { diffDays, formatLong, formatShort, plusDays, toISO, todayISO, type ISODate } from '../lib/dates'
 
 const PHASE_COLOR: Record<Phase, string> = {
@@ -33,6 +43,8 @@ const loadAll = async () => {
   const [periods, ovulations] = await Promise.all([api.getPeriods(), api.getOvulations()])
   return { periods, ovulations }
 }
+// À part : si la table des symptômes manque encore, le reste de la page fonctionne quand même
+const loadSymptoms = () => api.getSymptoms()
 
 export function Cycle() {
   const { data, error, loading, reload } = useLoad(loadAll, 'cycle')
@@ -59,6 +71,9 @@ function CycleContent({
   reload: () => Promise<void>
 }) {
   const state = useMemo(() => computeCycle(periods, ovulations, today), [periods, ovulations, today])
+  const sym = useLoad(loadSymptoms, 'cycle.symptoms')
+  const symptoms = useMemo(() => sym.data ?? [], [sym.data])
+  const patterns = useMemo(() => recurringPatterns(symptoms, periods, today), [symptoms, periods, today])
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const [selectedDay, setSelectedDay] = useState<ISODate | null>(null)
@@ -82,6 +97,12 @@ function CycleContent({
     last && !last.end_date && diffDays(today, last.start_date) < 10 && (state.status !== 'ok' || today <= plusDays(state.lastEnd, 4))
   const startedToday = periods.some((p) => p.start_date === today)
   const ovulationToday = ovulations.find((o) => o.date === today)
+  const todayEntry = symptoms.find((x) => x.day === today)
+
+  const saveSymptoms = async (entry: SymptomEntry) => {
+    sym.setData((prev) => [...(prev ?? []).filter((x) => x.day !== entry.day), entry].sort((a, b) => a.day.localeCompare(b.day)))
+    await api.saveSymptoms(entry)
+  }
 
   return (
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-16 xl:gap-24">
@@ -122,7 +143,8 @@ function CycleContent({
                 {ovulationToday ? 'Retirer l’ovulation du jour' : 'Ovulation aujourd’hui'}
               </button>
             </div>
-            <DailyTip state={state} today={today} />
+            <FeelingButton entry={todayEntry} onOpen={() => setSelectedDay(today)} />
+            <DailyTip state={state} today={today} patterns={patterns} />
           </>
         )}
 
@@ -134,9 +156,11 @@ function CycleContent({
       </div>
 
       <div>
-        <Calendar periods={periods} ovulations={ovulations} state={state} today={today} onSelect={setSelectedDay} />
+        <Calendar periods={periods} ovulations={ovulations} symptoms={symptoms} state={state} today={today} onSelect={setSelectedDay} />
 
-        {state.status === 'ok' && <History periods={periods} state={state} today={today} />}
+        {state.status === 'ok' && (
+          <History periods={periods} state={state} today={today} patterns={patterns} hasSymptoms={symptoms.length > 0} />
+        )}
 
         <p className="mt-8 text-sm leading-relaxed text-mist/80">
           Prévisions indicatives, calculées sur la moyenne de tes derniers cycles
@@ -147,7 +171,17 @@ function CycleContent({
 
       <BottomSheet open={Boolean(selectedDay)} onClose={() => setSelectedDay(null)} label="Modifier ce jour">
         {selectedDay && (
-          <DayActions day={selectedDay} today={today} periods={periods} ovulations={ovulations} state={state} busy={busy} run={run} />
+          <DayActions
+            day={selectedDay}
+            today={today}
+            periods={periods}
+            ovulations={ovulations}
+            state={state}
+            busy={busy}
+            run={run}
+            entry={symptoms.find((x) => x.day === selectedDay)}
+            onSaveSymptoms={saveSymptoms}
+          />
         )}
       </BottomSheet>
     </div>
@@ -239,18 +273,52 @@ function Ring({ state }: { state: Extract<CycleState, { status: 'ok' }> }) {
   )
 }
 
-function DailyTip({ state, today }: { state: Extract<CycleState, { status: 'ok' }>; today: ISODate }) {
+function FeelingButton({ entry, onOpen }: { entry: SymptomEntry | undefined; onOpen: () => void }) {
+  const noted = entry ? entry.items.map((id) => SYMPTOMS[id]).filter(Boolean) : []
   return (
-    <section aria-label="Info du jour" className="glass mx-auto mt-8 max-w-[26rem] rounded-3xl px-5 py-4">
+    <button
+      type="button"
+      onClick={onOpen}
+      className="mx-auto mt-6 flex w-full max-w-[26rem] items-center justify-between gap-3 rounded-3xl border border-glow/25 bg-starlight/[0.04] px-5 py-3.5 text-left transition-colors hover:border-glow/50"
+    >
+      <span className="min-w-0">
+        <span className="block">{noted.length || entry?.flow || entry?.note ? 'Aujourd’hui' : 'Comment tu te sens aujourd’hui ?'}</span>
+        {noted.length > 0 && (
+          <span className="mt-0.5 block truncate text-sm text-mist">
+            {noted.map((x) => (x.emoji ? `${x.emoji} ${x.label}` : x.label)).join(' · ')}
+          </span>
+        )}
+      </span>
+      <span className="flex-none text-sm text-glow">{entry ? 'Modifier' : 'Noter'}</span>
+    </button>
+  )
+}
+
+function DailyTip({ state, today, patterns }: { state: Extract<CycleState, { status: 'ok' }>; today: ISODate; patterns: Pattern[] }) {
+  const personal = personalTip(patterns, state)
+  return (
+    <section aria-label="Info du jour" className="glass mx-auto mt-4 max-w-[26rem] rounded-3xl px-5 py-4">
       <p className="flex items-center gap-2 text-xs tracking-[0.2em] uppercase" style={{ color: PHASE_COLOR[state.phase] }}>
-        <span aria-hidden>✦</span> Info du jour
+        <span aria-hidden>✦</span> {personal ? 'Rien que pour toi' : 'Info du jour'}
       </p>
-      <p className="mt-2 leading-relaxed text-starlight/90">{dailyTip(state, today)}</p>
+      <p className="mt-2 leading-relaxed text-starlight/90">{personal ?? dailyTip(state, today)}</p>
     </section>
   )
 }
 
-function History({ periods, state, today }: { periods: Period[]; state: Extract<CycleState, { status: 'ok' }>; today: ISODate }) {
+function History({
+  periods,
+  state,
+  today,
+  patterns,
+  hasSymptoms,
+}: {
+  periods: Period[]
+  state: Extract<CycleState, { status: 'ok' }>
+  today: ISODate
+  patterns: Pattern[]
+  hasSymptoms: boolean
+}) {
   const h = useMemo(() => cycleHistory(periods, today), [periods, today])
   const ongoing = state.phase === 'retard' ? state.cycleLength + state.delay : state.cycleDay
   const scale = Math.max(35, ...h.cycles.map((c) => c.length), ongoing)
@@ -324,6 +392,30 @@ function History({ periods, state, today }: { periods: Period[]; state: Extract<
             <Legend className="bg-glow" label="Cycle" />
             <Legend className="border border-dashed border-glow" label="Cycle en cours" />
           </ul>
+
+          <h3 className="font-display mt-8 text-xl">Ce qui revient</h3>
+          {patterns.length ? (
+            <ul className="mt-3 space-y-2">
+              {patterns.map((p) => {
+                const s = SYMPTOMS[p.id]
+                return (
+                  <li key={p.id} className="flex items-baseline gap-2 leading-snug">
+                    <span className="flex-none">
+                      {s.emoji && <span aria-hidden>{s.emoji} </span>}
+                      {s.label}
+                    </span>
+                    <span className="text-sm text-mist">· {describePattern(p)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed text-mist">
+              {hasSymptoms
+                ? 'Rien de régulier pour l’instant. Il faut un symptôme noté au moins 3 fois, au même moment, sur 2 cycles.'
+                : 'Note tes ressentis quelques jours par cycle : ce qui revient au même moment apparaîtra ici.'}
+            </p>
+          )}
         </>
       )}
     </section>
@@ -349,17 +441,20 @@ const MARK_STYLE: Record<Exclude<DayMark, null>, string> = {
 function Calendar({
   periods,
   ovulations,
+  symptoms,
   state,
   today,
   onSelect,
 }: {
   periods: Period[]
   ovulations: Ovulation[]
+  symptoms: SymptomEntry[]
   state: CycleState
   today: ISODate
   onSelect: (d: ISODate) => void
 }) {
   const [offset, setOffset] = useState(0)
+  const noted = useMemo(() => new Set(symptoms.map((x) => x.day)), [symptoms])
   const month = addMonths(new Date(), offset)
   const days = eachDayOfInterval({
     start: startOfWeek(startOfMonth(month), { weekStartsOn: 1 }),
@@ -400,19 +495,26 @@ function Calendar({
           const inMonth = date.getMonth() === currentMonth
           const mark = markDay(iso, periods, ovulations, state)
           const isToday = iso === today
+          const hasNote = noted.has(iso)
           return (
             <button
               key={iso}
               type="button"
               onClick={() => onSelect(iso)}
-              aria-label={`${formatLong(iso)}${mark ? `, ${MARK_LABEL[mark]}` : ''}`}
-              className={`mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[0.95rem] tabular-nums transition-colors ${
+              aria-label={`${formatLong(iso)}${mark ? `, ${MARK_LABEL[mark]}` : ''}${hasNote ? ', ressenti noté' : ''}`}
+              className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[0.95rem] tabular-nums transition-colors ${
                 inMonth ? '' : 'opacity-30'
               } ${mark ? MARK_STYLE[mark] : 'text-starlight/85 hover:bg-glow/10'} ${
                 isToday ? 'ring-2 ring-starlight ring-offset-2 ring-offset-night' : ''
               }`}
             >
               {date.getDate()}
+              {hasNote && (
+                <span
+                  aria-hidden
+                  className={`absolute bottom-[3px] left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${mark === 'period' || mark === 'ovulation' ? 'bg-night' : 'bg-starlight'}`}
+                />
+              )}
             </button>
           )
         })}
@@ -423,6 +525,12 @@ function Calendar({
         <Legend className="border border-dashed border-rose" label="Règles prévues" />
         <Legend className="bg-teal" label="Ovulation" />
         <Legend className="border border-dashed border-teal" label="Ovulation estimée" />
+        <li className="flex items-center gap-2">
+          <span className="flex h-3 w-3 items-center justify-center">
+            <span className="h-1 w-1 rounded-full bg-starlight" />
+          </span>
+          Ressenti noté
+        </li>
       </ul>
     </section>
   )
@@ -452,6 +560,8 @@ function DayActions({
   state,
   busy,
   run,
+  entry,
+  onSaveSymptoms,
 }: {
   day: ISODate
   today: ISODate
@@ -460,6 +570,8 @@ function DayActions({
   state: CycleState
   busy: boolean
   run: (fn: () => Promise<void>) => Promise<void>
+  entry: SymptomEntry | undefined
+  onSaveSymptoms: (e: SymptomEntry) => Promise<void>
 }) {
   const periodLength = state.status === 'ok' ? state.periodLength : 5
   const inPeriod = periods.find((p) => day >= p.start_date && day <= periodEnd(p, periodLength))
@@ -487,7 +599,11 @@ function DayActions({
       {future ? (
         <p className="text-mist">Ce jour est à venir : tu pourras le noter le moment venu.</p>
       ) : (
-        <div className="space-y-3 pt-2">
+        <SymptomPicker key={day} day={day} entry={entry} inPeriod={Boolean(inPeriod)} onSave={onSaveSymptoms} />
+      )}
+      {!future && (
+        <div className="space-y-3 pt-4">
+          <p className="text-xs tracking-[0.2em] text-mist uppercase">Cycle</p>
           {!inPeriod && <Action label="Début des règles ce jour" onClick={() => api.addPeriod(day)} />}
           {inPeriod && day > inPeriod.start_date && inPeriod.end_date !== day && (
             <Action label="Fin des règles ce jour" onClick={() => api.updatePeriod(inPeriod.id, { end_date: day })} />
@@ -512,6 +628,132 @@ function DayActions({
           )}
         </div>
       )}
+    </div>
+  )
+}
+
+/** Pastilles de ressenti : chaque toucher enregistre tout de suite. */
+function SymptomPicker({
+  day,
+  entry,
+  inPeriod,
+  onSave,
+}: {
+  day: ISODate
+  entry: SymptomEntry | undefined
+  inPeriod: boolean
+  onSave: (e: SymptomEntry) => Promise<void>
+}) {
+  const [value, setValue] = useState<SymptomEntry>(entry ?? { day, items: [], flow: null, note: null })
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const latest = useRef(value)
+  const noteTimer = useRef<number | undefined>(undefined)
+
+  const save = async (next: SymptomEntry) => {
+    latest.current = next
+    setValue(next)
+    setStatus('saving')
+    try {
+      await onSave(next)
+      if (latest.current === next) setStatus('saved')
+    } catch {
+      if (latest.current === next) setStatus('error')
+    }
+  }
+
+  // Note : enregistrée après une courte pause de frappe, et en quittant la fiche
+  useEffect(
+    () => () => {
+      if (noteTimer.current !== undefined) {
+        window.clearTimeout(noteTimer.current)
+        void onSave(latest.current)
+      }
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
+  const toggle = (id: string) => {
+    const cur = latest.current
+    void save({ ...cur, items: cur.items.includes(id) ? cur.items.filter((x) => x !== id) : [...cur.items, id] })
+  }
+
+  const chip = (pressed: boolean) =>
+    `rounded-full border px-3.5 py-2 text-[0.95rem] transition-colors ${
+      pressed ? 'border-glow bg-glow/20 text-starlight' : 'border-glow/20 text-starlight/80 hover:border-glow/45'
+    }`
+
+  return (
+    <div className="space-y-5 pt-1">
+      {SYMPTOM_GROUPS.map((g) => (
+        <fieldset key={g.title}>
+          <legend className="mb-2 text-xs tracking-[0.2em] text-mist uppercase">{g.title}</legend>
+          <div className="flex flex-wrap gap-2">
+            {g.items.map((s) => {
+              const on = value.items.includes(s.id)
+              return (
+                <button key={s.id} type="button" aria-pressed={on} onClick={() => toggle(s.id)} className={chip(on)}>
+                  {s.emoji && <span aria-hidden>{s.emoji} </span>}
+                  {s.label}
+                </button>
+              )
+            })}
+          </div>
+        </fieldset>
+      ))}
+
+      {(inPeriod || value.flow) && (
+        <fieldset>
+          <legend className="mb-2 text-xs tracking-[0.2em] text-mist uppercase">Flux</legend>
+          <div className="flex flex-wrap gap-2">
+            {FLOWS.map((f) => {
+              const on = value.flow === f.id
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => save({ ...latest.current, flow: on ? null : f.id })}
+                  className={chip(on)}
+                >
+                  {f.label}
+                </button>
+              )
+            })}
+          </div>
+        </fieldset>
+      )}
+
+      <label className="block">
+        <span className="mb-2 block text-xs tracking-[0.2em] text-mist uppercase">Note</span>
+        <textarea
+          className="field min-h-[4.5rem] resize-none"
+          rows={2}
+          maxLength={280}
+          placeholder="Facultatif"
+          value={value.note ?? ''}
+          onChange={(e) => {
+            const next = { ...latest.current, note: e.target.value }
+            latest.current = next
+            setValue(next)
+            window.clearTimeout(noteTimer.current)
+            noteTimer.current = window.setTimeout(() => {
+              noteTimer.current = undefined
+              void save(latest.current)
+            }, 700)
+          }}
+        />
+      </label>
+
+      <p aria-live="polite" className={`h-5 text-sm ${status === 'error' ? 'text-rose' : 'text-mist'}`}>
+        {status === 'saving'
+          ? 'Enregistrement…'
+          : status === 'saved'
+            ? 'Enregistré ✓'
+            : status === 'error'
+              ? 'Pas enregistré, réessaie dans un instant.'
+              : ''}
+      </p>
     </div>
   )
 }

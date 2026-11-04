@@ -1,5 +1,6 @@
 import { createClient, type Session } from '@supabase/supabase-js'
 import type { Ovulation, Period } from './cycle'
+import { isEmptyEntry, type SymptomEntry } from './symptoms'
 import type { ISODate } from './dates'
 import { createDemoApi } from './demo'
 
@@ -93,6 +94,9 @@ export interface Api {
   getOvulations(): Promise<Ovulation[]>
   addOvulation(date: ISODate): Promise<void>
   deleteOvulation(id: string): Promise<void>
+  getSymptoms(): Promise<SymptomEntry[]>
+  /** Enregistre la journée (la supprime si plus rien n'est noté). */
+  saveSymptoms(entry: SymptomEntry): Promise<void>
 }
 
 const BUCKET = 'wishlist'
@@ -229,6 +233,17 @@ function createSupabaseApi(): Api {
     },
     async deleteOvulation(id) {
       check(await sb.from('ovulations').delete().eq('id', id))
+    },
+    async getSymptoms() {
+      return check(await sb.from('symptoms').select('day, items, flow, note').order('day')) as SymptomEntry[]
+    },
+    async saveSymptoms(entry) {
+      if (isEmptyEntry(entry)) {
+        check(await sb.from('symptoms').delete().eq('day', entry.day))
+        return
+      }
+      const note = entry.note?.trim() || null
+      check(await sb.from('symptoms').upsert({ ...entry, note, updated_at: new Date().toISOString() }))
     },
   }
 }

@@ -1,6 +1,7 @@
 // Données fictives en mémoire pour développer sans Supabase (npm run demo, mot de passe « demo »).
 import type { Api, Photo, Reason, ReasonAuthor, TimelineEvent, WishlistItem } from './api'
 import type { Ovulation, Period } from './cycle'
+import { isEmptyEntry, type SymptomEntry } from './symptoms'
 import { plusDays, todayISO } from './dates'
 
 const uid = () => crypto.randomUUID()
@@ -70,6 +71,12 @@ export function createDemoApi(): Api {
     { id: uid(), start_date: plusDays(today, -11), end_date: plusDays(today, -7) },
   ]
   let ovulations: Ovulation[] = []
+  // Quelques symptômes qui reviennent, pour montrer « Ce qui revient »
+  let symptoms: SymptomEntry[] = [
+    ...[-96, -95, -68, -67, -39, -11, -10].map((d) => ({ day: plusDays(today, d), items: ['crampes'], flow: null, note: null })),
+    ...[-70, -42, -41].map((d) => ({ day: plusDays(today, d), items: ['sucre', 'fatiguee'], flow: null, note: null })),
+    { day: plusDays(today, -3), items: ['bien', 'bien-dormi'], flow: null, note: null },
+  ]
 
   return {
     async getSession() {
@@ -193,6 +200,13 @@ export function createDemoApi(): Api {
     },
     async deleteOvulation(id) {
       ovulations = ovulations.filter((o) => o.id !== id)
+    },
+    async getSymptoms() {
+      return [...symptoms].sort((a, b) => a.day.localeCompare(b.day))
+    },
+    async saveSymptoms(entry) {
+      symptoms = symptoms.filter((x) => x.day !== entry.day)
+      if (!isEmptyEntry(entry)) symptoms.push({ ...entry, note: entry.note?.trim() || null })
     },
   }
 }

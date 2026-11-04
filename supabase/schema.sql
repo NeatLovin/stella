@@ -79,12 +79,21 @@ create table if not exists public.ovulations (
   created_at timestamptz not null default now()
 );
 
+-- Symptômes notés jour par jour (une ligne par jour)
+create table if not exists public.symptoms (
+  day        date primary key,
+  items      text[] not null default '{}',
+  flow       text check (flow in ('leger', 'moyen', 'abondant')),
+  note       text,
+  updated_at timestamptz not null default now()
+);
+
 -- Sécurité : RLS partout, accès complet uniquement pour l'utilisateur connecté
 -- (il n'existe qu'un seul compte, et les inscriptions sont désactivées).
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages']
+  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages','symptoms']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "authenticated full access" on public.%I', t);
