@@ -10,6 +10,14 @@ export const SettingsContext = createContext<Settings>({
 })
 export const useSettings = () => useContext(SettingsContext)
 
+/** Le site est prêt à s'afficher (réglages chargés) : l'écran de chargement peut partir. */
+export const AppReadyContext = createContext<() => void>(() => {})
+export const useAppReady = () => useContext(AppReadyContext)
+
+/** L'écran de chargement a fini de disparaître (pour ne rien lancer derrière lui). */
+export const SplashGoneContext = createContext(true)
+export const useSplashGone = () => useContext(SplashGoneContext)
+
 export const WelcomeContext = createContext<() => void>(() => {})
 /** Rouvre le mot d'accueil (lien « Relire mon mot » sur l'accueil). */
 export const useShowWelcome = () => useContext(WelcomeContext)

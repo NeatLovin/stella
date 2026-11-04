@@ -1,12 +1,12 @@
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { MilestoneCelebration, milestoneSeen } from './components/MilestoneCelebration'
 import { Loading } from './components/Page'
 import { TabBar } from './components/TabBar'
 import { WaterReminder } from './components/WaterReminder'
 import { clearWelcomeFlag, hasWelcomeFlag, Welcome } from './components/Welcome'
-import { SettingsContext, WelcomeContext } from './context'
+import { SettingsContext, useAppReady, useSplashGone, WelcomeContext } from './context'
 import { useLoad } from './hooks/useLoad'
 import { api } from './lib/api'
 import { todayISO, type ISODate } from './lib/dates'
@@ -21,6 +21,10 @@ import { Wishlist } from './pages/Wishlist'
 export default function Hub() {
   const { data: settings } = useLoad(api.getSettings, 'settings')
   const [welcome, setWelcome] = useState(hasWelcomeFlag)
+  const ready = useAppReady()
+  useEffect(() => {
+    if (settings) ready()
+  }, [settings, ready])
   if (!settings) return <Loading />
   if (welcome && settings.welcome) {
     return (
@@ -51,8 +55,9 @@ export default function Hub() {
 function MilestoneAuto({ start }: { start: ISODate }) {
   const m = useMemo(() => milestoneOn(start, todayISO()), [start])
   const [open, setOpen] = useState(() => Boolean(m && !milestoneSeen(m)))
+  const splashGone = useSplashGone()
   if (!m) return null
-  return <MilestoneCelebration milestone={m} open={open} onClose={() => setOpen(false)} />
+  return <MilestoneCelebration milestone={m} open={open && splashGone} onClose={() => setOpen(false)} />
 }
 
 const ORDER = ['/', '/timeline', '/bocal', '/wishlist', '/cycle']

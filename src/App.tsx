@@ -1,9 +1,12 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { AnimatePresence, useReducedMotion } from 'motion/react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { CursorGlow } from './components/CursorGlow'
 import { CursorTrail } from './components/CursorTrail'
 import { OfflineBanner } from './components/OfflineBanner'
+import { Splash } from './components/Splash'
 import { Loading } from './components/Page'
 import { StarrySky } from './components/StarrySky'
+import { AppReadyContext, SplashGoneContext } from './context'
 import { api, configError } from './lib/api'
 import { forgetTrusted, isTrusted, markTrusted } from './lib/offline'
 import { Login } from './pages/Login'
@@ -23,8 +26,32 @@ function ConfigMissing() {
   )
 }
 
+// L'écran de chargement reste au moins le temps de son animation, et au plus quelques secondes
+const SPLASH_MIN = 1900
+const SPLASH_MIN_REDUCED = 500
+const SPLASH_MAX = 7000
+
 export default function App() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
+  const reduced = useReducedMotion()
+  const [minDone, setMinDone] = useState(false)
+  const [maxDone, setMaxDone] = useState(false)
+  const [hubReady, setHubReady] = useState(false)
+  const [splashGone, setSplashGone] = useState(false)
+  const markReady = useCallback(() => setHubReady(true), [])
+
+  useEffect(() => {
+    const min = window.setTimeout(() => setMinDone(true), reduced ? SPLASH_MIN_REDUCED : SPLASH_MIN)
+    const max = window.setTimeout(() => setMaxDone(true), SPLASH_MAX)
+    return () => {
+      window.clearTimeout(min)
+      window.clearTimeout(max)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const ready = signedIn === false || (signedIn === true && hubReady)
+  const showSplash = !configError && !maxDone && !(minDone && ready)
 
   useEffect(() => {
     if (configError) return
@@ -62,15 +89,20 @@ export default function App() {
       <CursorGlow />
       <CursorTrail />
       <OfflineBanner />
-      {signedIn === null ? (
-        <Loading />
-      ) : signedIn ? (
-        <Suspense fallback={<Loading />}>
-          <Hub />
-        </Suspense>
-      ) : (
-        <Login />
-      )}
+      <AppReadyContext.Provider value={markReady}>
+        <SplashGoneContext.Provider value={splashGone}>
+          {signedIn === null ? (
+            <Loading />
+          ) : signedIn ? (
+            <Suspense fallback={<Loading />}>
+              <Hub />
+            </Suspense>
+          ) : (
+            <Login />
+          )}
+        </SplashGoneContext.Provider>
+      </AppReadyContext.Provider>
+      <AnimatePresence onExitComplete={() => setSplashGone(true)}>{showSplash && <Splash key="splash" />}</AnimatePresence>
     </>
   )
 }
