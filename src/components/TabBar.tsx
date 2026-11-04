@@ -1,4 +1,5 @@
 import { motion } from 'motion/react'
+import { SPRING, SPRING_POP } from '../lib/motion'
 import { NavLink } from 'react-router-dom'
 import { IconConstellation, IconGift, IconJar, IconMoon, IconStar } from './icons'
 
@@ -21,7 +22,7 @@ export function TabBar() {
               to={to}
               end={to === '/'}
               className={({ isActive }) =>
-                `relative flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.68rem] tracking-wide transition-colors duration-300 ${
+                `press relative flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.68rem] tracking-wide transition-colors duration-300 ${
                   isActive ? 'text-starlight' : 'text-mist/75 hover:text-starlight'
                 }`
               }
@@ -36,11 +37,13 @@ export function TabBar() {
                       aria-hidden
                     />
                   )}
-                  <Icon
-                    width={22}
-                    height={22}
-                    className={`relative ${isActive ? 'text-glow drop-shadow-[0_0_8px_rgb(125_162_255/0.9)]' : ''}`}
-                  />
+                  <motion.span
+                    className="relative"
+                    animate={isActive ? { y: -1, scale: 1.12, rotate: [0, -10, 0] } : { y: 0, scale: 1, rotate: 0 }}
+                    transition={isActive ? { ...SPRING_POP, rotate: { duration: 0.45 } } : SPRING}
+                  >
+                    <Icon width={22} height={22} className={isActive ? 'text-glow drop-shadow-[0_0_8px_rgb(125_162_255/0.9)]' : ''} />
+                  </motion.span>
                   <span className="relative">{label}</span>
                 </>
               )}

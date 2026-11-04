@@ -1,5 +1,6 @@
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { IconChevron } from '../components/icons'
@@ -19,6 +20,7 @@ import {
   type Phase,
 } from '../lib/cycle'
 import { dailyTip } from '../lib/cycleTips'
+import { EASE_OUT, rise, riseLater, SPRING_POP, stagger } from '../lib/motion'
 import {
   describePattern,
   FLOWS,
@@ -106,13 +108,15 @@ function CycleContent({
 
   return (
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-16 xl:gap-24">
-      <div className="lg:sticky lg:top-10">
+      <motion.div className="lg:sticky lg:top-10" variants={stagger(0.09, 0.1)} initial="hidden" animate="show">
         {state.status === 'empty' ? (
           <EmptyStart onSave={(d) => run(() => api.addPeriod(d))} busy={busy} />
         ) : (
           <>
-            <Ring state={state} />
-            <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <motion.div variants={rise}>
+              <Ring state={state} />
+            </motion.div>
+            <motion.div variants={rise} className="mt-8 flex flex-wrap justify-center gap-3">
               {ongoing ? (
                 <button
                   type="button"
@@ -142,9 +146,13 @@ function CycleContent({
               >
                 {ovulationToday ? 'Retirer l’ovulation du jour' : 'Ovulation aujourd’hui'}
               </button>
-            </div>
-            <FeelingButton entry={todayEntry} onOpen={() => setSelectedDay(today)} />
-            <DailyTip state={state} today={today} patterns={patterns} />
+            </motion.div>
+            <motion.div variants={rise}>
+              <FeelingButton entry={todayEntry} onOpen={() => setSelectedDay(today)} />
+            </motion.div>
+            <motion.div variants={rise}>
+              <DailyTip state={state} today={today} patterns={patterns} />
+            </motion.div>
           </>
         )}
 
@@ -153,9 +161,9 @@ function CycleContent({
             Action impossible : {actionError}
           </p>
         )}
-      </div>
+      </motion.div>
 
-      <div>
+      <motion.div variants={riseLater(0.3)} initial="hidden" animate="show">
         <Calendar periods={periods} ovulations={ovulations} symptoms={symptoms} state={state} today={today} onSelect={setSelectedDay} />
 
         {state.status === 'ok' && (
@@ -167,7 +175,7 @@ function CycleContent({
           {state.status === 'ok' && state.usingDefaults ? ' (28 jours par défaut tant qu’il y a moins de 2 cycles)' : ''}. Ce n’est pas une
           méthode de contraception. Les infos du jour sont des repères généraux : chaque corps est différent.
         </p>
-      </div>
+      </motion.div>
 
       <BottomSheet open={Boolean(selectedDay)} onClose={() => setSelectedDay(null)} label="Modifier ce jour">
         {selectedDay && (
@@ -233,8 +241,8 @@ function Ring({ state }: { state: Extract<CycleState, { status: 'ok' }> }) {
       <div className="relative w-full max-w-[18rem] lg:max-w-[22rem]">
         <svg viewBox="0 0 240 240" className="w-full -rotate-0" aria-hidden>
           <circle cx="120" cy="120" r={R} fill="none" stroke="rgb(125 162 255 / 0.12)" strokeWidth="14" />
-          {segments.map((s) => (
-            <circle
+          {segments.map((s, i) => (
+            <motion.circle
               key={s.color}
               cx="120"
               cy="120"
@@ -243,25 +251,43 @@ function Ring({ state }: { state: Extract<CycleState, { status: 'ok' }> }) {
               stroke={s.color}
               strokeOpacity="0.85"
               strokeWidth="14"
-              strokeDasharray={`${((s.to - s.from) / cycleLength) * C - 3} ${C}`}
+              initial={{ strokeDasharray: `0 ${C}` }}
+              animate={{ strokeDasharray: `${Math.max(0, ((s.to - s.from) / cycleLength) * C - 3)} ${C}` }}
+              transition={{ delay: 0.25 + i * 0.16, duration: 0.6, ease: EASE_OUT }}
               strokeDashoffset={-(s.from / cycleLength) * C}
               transform="rotate(-90 120 120)"
             />
           ))}
           {phase !== 'retard' && (
-            <>
-              <circle cx={dot.x} cy={dot.y} r="13" fill={PHASE_COLOR[phase]} opacity="0.35" />
+            <motion.g
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ ...SPRING_POP, delay: 0.25 + segments.length * 0.16 + 0.2 }}
+            >
+              <motion.circle
+                cx={dot.x}
+                cy={dot.y}
+                fill={PHASE_COLOR[phase]}
+                initial={{ r: 13, opacity: 0.35 }}
+                animate={{ r: [13, 17, 13], opacity: [0.35, 0.12, 0.35] }}
+                transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut', delay: 1.4 }}
+              />
               <circle cx={dot.x} cy={dot.y} r="7.5" fill="#F4F6FF" />
-            </>
+            </motion.g>
           )}
         </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <motion.div
+          className="absolute inset-0 flex flex-col items-center justify-center text-center"
+          initial={{ opacity: 0, scale: 0.92 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.45, duration: 0.6, ease: EASE_OUT }}
+        >
           <p className="font-display max-w-[11rem] text-[1.6rem] leading-[1.05] font-medium" style={{ color: PHASE_COLOR[phase] }}>
             {PHASE_LABEL[phase]}
           </p>
           <p className="mt-1 text-sm text-mist">Jour {cycleDay}</p>
           <p className="mt-3 max-w-[11rem] text-[0.95rem] leading-snug">{next}</p>
-        </div>
+        </motion.div>
       </div>
       <div className="mt-4 text-center text-sm leading-relaxed text-mist">
         <p>Prochaines règles vers le {formatLong(state.nextPeriod)}</p>
@@ -348,7 +374,7 @@ function History({
           )}
 
           <ul className="mt-5 space-y-2.5" aria-label="Derniers cycles">
-            {h.cycles.map((c) => (
+            {h.cycles.map((c, i) => (
               <li key={c.start} className="grid grid-cols-[3.75rem_1fr_4rem] items-center gap-3 text-sm">
                 <span className="text-mist">{formatShort(c.start)}</span>
                 <span
@@ -356,17 +382,21 @@ function History({
                   role="img"
                   aria-label={`Cycle de ${c.length} jours${c.periodLength ? `, règles de ${c.periodLength} jours` : ''}${c.outlier ? ', hors moyenne' : ''}`}
                 >
-                  <span
+                  <motion.span
                     className="absolute inset-y-0 left-0 rounded-full"
-                    style={{ width: pct(c.length), background: PHASE_COLOR.folliculaire, opacity: c.outlier ? 0.35 : 0.75 }}
+                    style={{ background: PHASE_COLOR.folliculaire, opacity: c.outlier ? 0.35 : 0.75 }}
+                    initial={{ width: 0 }}
+                    whileInView={{ width: pct(c.length) }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 + i * 0.08, duration: 0.8, ease: EASE_OUT }}
                   />
-                  <span
+                  <motion.span
                     className="absolute inset-y-0 left-0 rounded-full"
-                    style={{
-                      width: pct(c.periodLength ?? state.periodLength),
-                      background: PHASE_COLOR.menstruelle,
-                      opacity: c.periodLength ? 0.95 : 0.4,
-                    }}
+                    style={{ background: PHASE_COLOR.menstruelle, opacity: c.periodLength ? 0.95 : 0.4 }}
+                    initial={{ width: 0 }}
+                    whileInView={{ width: pct(c.periodLength ?? state.periodLength) }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.1 + i * 0.08, duration: 0.5, ease: EASE_OUT }}
                   />
                 </span>
                 <span className="text-right tabular-nums">{c.length} j</span>
@@ -379,9 +409,13 @@ function History({
                 role="img"
                 aria-label={`Cycle en cours, jour ${ongoing}`}
               >
-                <span
+                <motion.span
                   className="absolute inset-y-0 left-0 rounded-full border border-dashed"
-                  style={{ width: pct(ongoing), borderColor: PHASE_COLOR.folliculaire }}
+                  style={{ borderColor: PHASE_COLOR.folliculaire }}
+                  initial={{ width: 0 }}
+                  whileInView={{ width: pct(ongoing) }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1 + h.cycles.length * 0.08, duration: 0.8, ease: EASE_OUT }}
                 />
               </span>
               <span className="text-right whitespace-nowrap text-mist">en cours</span>
@@ -454,6 +488,11 @@ function Calendar({
   onSelect: (d: ISODate) => void
 }) {
   const [offset, setOffset] = useState(0)
+  const [dir, setDir] = useState(0)
+  const go = (d: number) => {
+    setDir(d)
+    setOffset((o) => o + d)
+  }
   const noted = useMemo(() => new Set(symptoms.map((x) => x.day)), [symptoms])
   const month = addMonths(new Date(), offset)
   const days = eachDayOfInterval({
@@ -467,57 +506,87 @@ function Calendar({
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
-          className="rounded-full p-2 text-mist hover:text-starlight"
-          onClick={() => setOffset((o) => o - 1)}
+          className="press rounded-full p-2 text-mist hover:text-starlight"
+          onClick={() => go(-1)}
           aria-label="Mois précédent"
         >
           <IconChevron dir="left" />
         </button>
-        <h2 className="font-display text-2xl capitalize">{format(month, 'MMMM yyyy', { locale: fr })}</h2>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.h2
+            key={offset}
+            className="font-display text-2xl capitalize"
+            initial={{ opacity: 0, y: dir * 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -dir * 8 }}
+            transition={{ duration: 0.18 }}
+          >
+            {format(month, 'MMMM yyyy', { locale: fr })}
+          </motion.h2>
+        </AnimatePresence>
         <button
           type="button"
-          className="rounded-full p-2 text-mist hover:text-starlight"
-          onClick={() => setOffset((o) => o + 1)}
+          className="press rounded-full p-2 text-mist hover:text-starlight"
+          onClick={() => go(1)}
           aria-label="Mois suivant"
         >
           <IconChevron />
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-1.5 text-center">
+      <div className="grid grid-cols-7 text-center">
         {['lu', 'ma', 'me', 'je', 've', 'sa', 'di'].map((d) => (
-          <span key={d} className="pb-1 text-xs text-mist/70">
+          <span key={d} className="pb-2.5 text-xs text-mist/70">
             {d}
           </span>
         ))}
-        {days.map((date) => {
-          const iso = toISO(date)
-          const inMonth = date.getMonth() === currentMonth
-          const mark = markDay(iso, periods, ovulations, state)
-          const isToday = iso === today
-          const hasNote = noted.has(iso)
-          return (
-            <button
-              key={iso}
-              type="button"
-              onClick={() => onSelect(iso)}
-              aria-label={`${formatLong(iso)}${mark ? `, ${MARK_LABEL[mark]}` : ''}${hasNote ? ', ressenti noté' : ''}`}
-              className={`relative mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[0.95rem] tabular-nums transition-colors ${
-                inMonth ? '' : 'opacity-30'
-              } ${mark ? MARK_STYLE[mark] : 'text-starlight/85 hover:bg-glow/10'} ${
-                isToday ? 'ring-2 ring-starlight ring-offset-2 ring-offset-night' : ''
-              }`}
-            >
-              {date.getDate()}
-              {hasNote && (
-                <span
-                  aria-hidden
-                  className={`absolute bottom-[3px] left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${mark === 'period' || mark === 'ovulation' ? 'bg-night' : 'bg-starlight'}`}
-                />
-              )}
-            </button>
-          )
-        })}
+      </div>
+      <div className="overflow-hidden">
+        <AnimatePresence mode="wait" initial={false} custom={dir}>
+          <motion.div
+            key={offset}
+            custom={dir}
+            className="grid grid-cols-7 gap-y-1.5 text-center"
+            variants={{
+              enter: (d: number) => ({ opacity: 0, x: d * 40 }),
+              center: { opacity: 1, x: 0 },
+              exit: (d: number) => ({ opacity: 0, x: -d * 40 }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.22, ease: EASE_OUT }}
+          >
+            {days.map((date) => {
+              const iso = toISO(date)
+              const inMonth = date.getMonth() === currentMonth
+              const mark = markDay(iso, periods, ovulations, state)
+              const isToday = iso === today
+              const hasNote = noted.has(iso)
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  onClick={() => onSelect(iso)}
+                  aria-label={`${formatLong(iso)}${mark ? `, ${MARK_LABEL[mark]}` : ''}${hasNote ? ', ressenti noté' : ''}`}
+                  className={`press relative mx-auto flex h-10 w-10 items-center justify-center rounded-full text-[0.95rem] tabular-nums ${
+                    inMonth ? '' : 'opacity-30'
+                  } ${mark ? MARK_STYLE[mark] : 'text-starlight/85 hover:bg-glow/10'} ${
+                    isToday ? 'ring-2 ring-starlight ring-offset-2 ring-offset-night' : ''
+                  }`}
+                >
+                  {date.getDate()}
+                  {hasNote && (
+                    <span
+                      aria-hidden
+                      className={`absolute bottom-[3px] left-1/2 h-1 w-1 -translate-x-1/2 rounded-full ${mark === 'period' || mark === 'ovulation' ? 'bg-night' : 'bg-starlight'}`}
+                    />
+                  )}
+                </button>
+              )
+            })}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-xs text-mist">
@@ -679,8 +748,10 @@ function SymptomPicker({
   }
 
   const chip = (pressed: boolean) =>
-    `rounded-full border px-3.5 py-2 text-[0.95rem] transition-colors ${
-      pressed ? 'border-glow bg-glow/20 text-starlight' : 'border-glow/20 text-starlight/80 hover:border-glow/45'
+    `press rounded-full border px-3.5 py-2 text-[0.95rem] ${
+      pressed
+        ? 'border-glow bg-glow/20 text-starlight shadow-[0_0_14px_rgb(46_91_255/0.35)]'
+        : 'border-glow/20 text-starlight/80 hover:border-glow/45'
     }`
 
   return (

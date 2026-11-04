@@ -1,3 +1,4 @@
+import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState, type FormEvent } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { IconCheck, IconExternal, IconGift, IconImage, IconPlus } from '../components/icons'
@@ -6,6 +7,7 @@ import { useLoad } from '../hooks/useLoad'
 import { useImageUrls } from '../hooks/useImageUrls'
 import { api, type WishlistItem } from '../lib/api'
 import { compressImage } from '../lib/image'
+import { EASE_OUT, SPRING_POP, SPRING_SOFT } from '../lib/motion'
 
 type Editing = { mode: 'new' } | { mode: 'edit'; item: WishlistItem }
 
@@ -30,16 +32,25 @@ export function Wishlist() {
 
   const grid = (items: WishlistItem[]) => (
     <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10 xl:grid-cols-5">
-      {items.map((item) => (
-        <li key={item.id}>
-          <WishCard
-            item={item}
-            src={item.image_path ? urls[item.image_path] : undefined}
-            onEdit={() => setEditing({ mode: 'edit', item })}
-            onToggle={() => void toggleOffered(item)}
-          />
-        </li>
-      ))}
+      <AnimatePresence initial>
+        {items.map((item, i) => (
+          <motion.li
+            key={item.id}
+            layout
+            initial={{ opacity: 0, y: 18, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { delay: Math.min(i, 10) * 0.05, duration: 0.5, ease: EASE_OUT } }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+            transition={SPRING_SOFT}
+          >
+            <WishCard
+              item={item}
+              src={item.image_path ? urls[item.image_path] : undefined}
+              onEdit={() => setEditing({ mode: 'edit', item })}
+              onToggle={() => void toggleOffered(item)}
+            />
+          </motion.li>
+        ))}
+      </AnimatePresence>
     </ul>
   )
   const urls = useImageUrls((data ?? []).map((w) => w.image_path))
@@ -90,20 +101,31 @@ function WishCard({ item, src, onEdit, onToggle }: { item: WishlistItem; src?: s
     <article className="group relative">
       <button type="button" onClick={onEdit} className="block w-full text-left" aria-label={`Modifier ${item.name}`}>
         <div
-          className={`relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-glow/15 bg-dusk/60 transition-[filter,opacity] duration-300 ${
+          className={`relative aspect-[4/5] overflow-hidden rounded-[1.1rem] border border-glow/15 bg-dusk/60 transition-[filter,opacity,transform,box-shadow] duration-500 group-hover:-translate-y-1 group-hover:shadow-[0_14px_40px_rgb(46_91_255/0.25)] ${
             done ? 'opacity-55 grayscale' : ''
           }`}
         >
           {src ? (
-            <img src={src} alt="" className="h-full w-full object-cover" loading="lazy" />
+            <img
+              src={src}
+              alt=""
+              className="h-full w-full object-cover opacity-0 transition-[opacity,transform] duration-700 group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
+              loading="lazy"
+              onLoad={(e) => (e.currentTarget.dataset.loaded = 'true')}
+              ref={(el) => {
+                if (el?.complete && el.naturalWidth) el.dataset.loaded = 'true'
+              }}
+            />
           ) : (
             <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_50%_35%,rgb(46_91_255/0.35),transparent_70%)] text-glow/80">
               <IconGift width={40} height={40} />
             </div>
           )}
         </div>
-        <h2 className={`mt-3 line-clamp-2 leading-snug ${done ? 'text-mist line-through decoration-glow/80 decoration-2' : ''}`}>
-          {item.name}
+        <h2 className={`mt-3 line-clamp-2 leading-snug transition-colors duration-500 ${done ? 'text-mist' : ''}`}>
+          <span className="strike" data-on={done}>
+            {item.name}
+          </span>
           {done && <span className="sr-only"> (déjà offert)</span>}
         </h2>
       </button>
@@ -113,13 +135,34 @@ function WishCard({ item, src, onEdit, onToggle }: { item: WishlistItem; src?: s
         aria-pressed={done}
         aria-label={done ? `Remettre ${item.name} dans les envies` : `Marquer ${item.name} comme offert`}
         title={done ? 'Remettre dans les envies' : 'Déjà offert'}
-        className={`absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur transition-colors ${
+        className={`press absolute top-2 right-2 flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur ${
           done
             ? 'border-glow bg-electric text-white shadow-[0_0_16px_rgba(46,91,255,.6)]'
             : 'border-white/25 bg-night/55 text-mist hover:text-starlight'
         }`}
       >
-        <IconCheck width={20} height={20} />
+        <motion.span
+          key={String(done)}
+          initial={done ? { scale: 0.3, rotate: -25 } : { scale: 0.8 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={SPRING_POP}
+          className="flex"
+        >
+          <IconCheck width={20} height={20} />
+        </motion.span>
+        <AnimatePresence initial={false}>
+          {done && (
+            <motion.span
+              key="ring"
+              aria-hidden
+              className="pointer-events-none absolute inset-0 rounded-full border-2 border-glow"
+              initial={{ scale: 1, opacity: 0.9 }}
+              animate={{ scale: 1.9, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, ease: EASE_OUT }}
+            />
+          )}
+        </AnimatePresence>
       </button>
       {item.url && (
         <a

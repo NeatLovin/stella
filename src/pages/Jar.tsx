@@ -8,6 +8,7 @@ import { useSettings } from '../context'
 import { api, type Reason, type ReasonAuthor } from '../lib/api'
 import { drawFromBag, emptyBag, markSeen, uniqueByText, type BagState } from '../lib/bag'
 import { diffDays, todayISO } from '../lib/dates'
+import { EASE_OUT, SPRING } from '../lib/motion'
 
 // Tirages déjà faits sur cet appareil, conservés entre les visites (un sac par bocal)
 const bagKey = (author: ReasonAuthor) => (author === 'him' ? 'stella.jar.seen' : 'stella.jar.seen.her')
@@ -117,9 +118,17 @@ export function Jar() {
             aria-selected={author === t.id}
             aria-controls={panelId}
             onClick={() => choose(t.id)}
-            className={`rounded-full px-5 py-2 text-sm transition-colors ${author === t.id ? 'bg-electric text-white' : 'text-mist hover:text-starlight'}`}
+            className={`press relative rounded-full px-5 py-2 text-sm ${author === t.id ? 'text-white' : 'text-mist hover:text-starlight'}`}
           >
-            {t.label}
+            {author === t.id && (
+              <motion.span
+                layoutId="jar-tab"
+                className="absolute inset-0 rounded-full bg-electric shadow-[0_0_18px_rgb(46_91_255/0.5)]"
+                transition={SPRING}
+                aria-hidden
+              />
+            )}
+            <span className="relative">{t.label}</span>
           </button>
         ))}
       </div>
@@ -189,8 +198,10 @@ function JarContent({ reasons, author, actions }: { reasons: Reason[]; author: R
     writeBag(author, markSeen(ids, readBag(author), today.id))
   }, [ids, today.id, author])
 
+  const [shake, setShake] = useState(0)
   const draw = () => {
     if (reasons.length < 2) return
+    setShake((n) => n + 1)
     const { id, state } = drawFromBag(ids, readBag(author))
     writeBag(author, state)
     setCurrentId(id)
@@ -228,7 +239,14 @@ function JarContent({ reasons, author, actions }: { reasons: Reason[]; author: R
         className="group mt-8 flex flex-col items-center disabled:opacity-60 lg:mt-0"
         aria-label="Tirer une autre raison"
       >
-        <JarArt count={reasons.length} author={author} />
+        <motion.span
+          key={shake}
+          className="block origin-bottom"
+          animate={shake ? { rotate: [0, -7, 6, -4, 2, 0], y: [0, -6, 0, -2, 0] } : undefined}
+          transition={{ duration: 0.55, ease: 'easeInOut' }}
+        >
+          <JarArt count={reasons.length} author={author} />
+        </motion.span>
         <span className="btn-ghost mt-5">Tirer une autre raison</span>
       </button>
 
@@ -310,7 +328,7 @@ function FavButton({ active, onToggle }: { active: boolean; onToggle: () => void
       onClick={onToggle}
       aria-pressed={active}
       aria-label={active ? 'Retirer des préférées' : 'Ajouter aux préférées'}
-      className={`absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+      className={`press absolute top-2 right-2 flex h-11 w-11 items-center justify-center rounded-full ${
         active ? 'text-rose' : 'text-mist/70 hover:text-rose'
       }`}
     >
@@ -322,6 +340,25 @@ function FavButton({ active, onToggle }: { active: boolean; onToggle: () => void
       >
         <IconHeart width={22} height={22} filled={active} className={active ? 'drop-shadow-[0_0_8px_rgb(255_107_154/0.7)]' : ''} />
       </motion.span>
+      {/* Petit éclat de cœurs quand on aime */}
+      <AnimatePresence initial={false}>
+        {active && (
+          <motion.span key="burst" aria-hidden className="pointer-events-none absolute inset-0" exit={{ opacity: 0 }}>
+            {Array.from({ length: 7 }, (_, i) => {
+              const a = (i / 7) * Math.PI * 2 - Math.PI / 2
+              return (
+                <motion.span
+                  key={i}
+                  className="absolute top-1/2 left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-rose"
+                  initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+                  animate={{ x: Math.cos(a) * 22, y: Math.sin(a) * 22, opacity: 0, scale: 0.4 }}
+                  transition={{ duration: 0.55, ease: EASE_OUT }}
+                />
+              )
+            })}
+          </motion.span>
+        )}
+      </AnimatePresence>
     </button>
   )
 }

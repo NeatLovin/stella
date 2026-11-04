@@ -1,4 +1,6 @@
+import { motion } from 'motion/react'
 import type { ReactNode } from 'react'
+import { rise, stagger } from '../lib/motion'
 
 /**
  * Gabarit de page. Sur téléphone : colonne étroite.
@@ -8,20 +10,36 @@ export function Page({ title, intro, wide, children }: { title?: string; intro?:
   return (
     <main className={`safe-top safe-bottom mx-auto w-full max-w-xl px-5 ${wide ? 'lg:max-w-6xl lg:px-10 2xl:max-w-7xl' : ''}`}>
       {title && (
-        <header className="mb-8 pt-4 lg:mb-12">
-          <h1 className="font-display text-[clamp(2.4rem,10vw,3.25rem)] leading-none font-medium tracking-tight">{title}</h1>
-          {intro && <p className="mt-3 max-w-[36ch] text-mist">{intro}</p>}
-        </header>
+        <motion.header className="mb-8 pt-4 lg:mb-12" variants={stagger(0.08, 0.05)} initial="hidden" animate="show">
+          <motion.h1 variants={rise} className="font-display text-[clamp(2.4rem,10vw,3.25rem)] leading-none font-medium tracking-tight">
+            {title}
+          </motion.h1>
+          {intro && (
+            <motion.p variants={rise} className="mt-3 max-w-[36ch] text-mist">
+              {intro}
+            </motion.p>
+          )}
+        </motion.header>
       )}
       {children}
     </main>
   )
 }
 
+/** Petite étoile qui tourne et respire, comme sur l'écran de chargement. */
 export function Loading() {
   return (
     <div className="flex justify-center py-16" role="status" aria-label="Chargement">
-      <span className="h-2 w-2 animate-ping rounded-full bg-glow" />
+      <motion.svg
+        viewBox="0 0 64 64"
+        className="h-7 w-7 text-glow drop-shadow-[0_0_10px_rgb(125_162_255/0.8)]"
+        initial={{ opacity: 0, scale: 0.6 }}
+        animate={{ opacity: [0.55, 1, 0.55], scale: [0.85, 1.05, 0.85], rotate: [0, 90] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        aria-hidden
+      >
+        <path d="M32 8 C34 24 40 30 56 32 C40 34 34 40 32 56 C30 40 24 34 8 32 C24 30 30 24 32 8 Z" fill="currentColor" />
+      </motion.svg>
     </div>
   )
 }

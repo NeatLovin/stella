@@ -35,9 +35,9 @@ export function Games() {
       <button
         type="button"
         onClick={() => setMenu(true)}
-        className="group mt-8 flex items-center gap-4 self-start rounded-full py-1 pr-5 pl-1 text-left transition-colors hover:bg-white/5"
+        className="press group mt-8 flex items-center gap-4 self-start rounded-full py-1 pr-5 pl-1 text-left hover:bg-white/5"
       >
-        <span className="flex -space-x-5 transition-transform group-hover:-translate-y-0.5">
+        <span className="flex -space-x-5 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:[&>*:first-child]:-rotate-6 [&>*]:transition-transform [&>*]:duration-300 group-hover:[&>*:last-child]:rotate-6">
           <span className={`${MEDAL} z-10 h-16 w-16`}>
             <DenyLogo className="h-12" />
           </span>

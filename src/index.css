@@ -23,6 +23,11 @@
   --tabbar-gap: max(0.75rem, env(safe-area-inset-bottom));
 }
 
+:root {
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 html {
   min-height: 100%;
   background:
@@ -137,12 +142,14 @@ select {
   color: white;
   box-shadow: 0 0 24px rgb(46 91 255 / 0.45);
   transition:
-    transform 0.15s,
-    box-shadow 0.2s,
-    opacity 0.2s;
+    transform 0.35s var(--ease-spring),
+    box-shadow 0.3s,
+    opacity 0.2s,
+    filter 0.3s;
 }
-.btn-primary:active {
-  transform: scale(0.97);
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.95);
+  transition-duration: 0.12s;
 }
 .btn-primary:disabled {
   opacity: 0.5;
@@ -157,10 +164,60 @@ select {
   border: 1px solid rgb(125 162 255 / 0.35);
   padding: 0.75rem 1.3rem;
   color: var(--color-starlight);
-  transition: background 0.2s;
+  transition:
+    transform 0.35s var(--ease-spring),
+    background 0.25s,
+    border-color 0.25s,
+    box-shadow 0.3s;
 }
-.btn-ghost:active {
+.btn-ghost:active:not(:disabled) {
   background: rgb(125 162 255 / 0.12);
+  transform: scale(0.96);
+  transition-duration: 0.12s;
+}
+
+/* Souris : les boutons s'élèvent et brillent un peu plus */
+@media (hover: hover) {
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 0 36px rgb(46 91 255 / 0.7);
+    filter: brightness(1.08);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: rgb(125 162 255 / 0.7);
+    background: rgb(125 162 255 / 0.07);
+    box-shadow: 0 0 22px rgb(46 91 255 / 0.25);
+  }
+}
+
+/* Petit enfoncement au toucher (pastilles, onglets, boutons ronds) */
+.press {
+  transition:
+    transform 0.35s var(--ease-spring),
+    background-color 0.25s,
+    border-color 0.25s,
+    color 0.25s,
+    box-shadow 0.3s;
+}
+.press:active:not(:disabled) {
+  transform: scale(0.93);
+  transition-duration: 0.12s;
+}
+
+/* Trait qui barre le texte en glissant (s'étend sur plusieurs lignes) */
+.strike {
+  background-image: linear-gradient(var(--color-glow), var(--color-glow));
+  background-repeat: no-repeat;
+  background-position: 0 58%;
+  background-size: 0% 2px;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition:
+    background-size 0.5s var(--ease-soft),
+    color 0.4s;
+}
+.strike[data-on='true'] {
+  background-size: 100% 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,4 +1,4 @@
-import { AnimatePresence, useReducedMotion } from 'motion/react'
+import { AnimatePresence, MotionConfig, useReducedMotion } from 'motion/react'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { CursorGlow } from './components/CursorGlow'
 import { CursorTrail } from './components/CursorTrail'
@@ -84,7 +84,7 @@ export default function App() {
   }
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <StarrySky />
       <CursorGlow />
       <CursorTrail />
@@ -103,6 +103,6 @@ export default function App() {
         </SplashGoneContext.Provider>
       </AppReadyContext.Provider>
       <AnimatePresence onExitComplete={() => setSplashGone(true)}>{showSplash && <Splash key="splash" />}</AnimatePresence>
-    </>
+    </MotionConfig>
   )
 }

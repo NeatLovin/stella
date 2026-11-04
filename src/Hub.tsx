@@ -11,6 +11,7 @@ import { useLoad } from './hooks/useLoad'
 import { api } from './lib/api'
 import { todayISO, type ISODate } from './lib/dates'
 import { milestoneOn } from './lib/milestones'
+import { EASE_OUT } from './lib/motion'
 import { Cycle } from './pages/Cycle'
 import { Home } from './pages/Home'
 import { Jar } from './pages/Jar'
@@ -80,14 +81,24 @@ function AnimatedRoutes() {
         key={location.pathname}
         custom={dir}
         variants={{
-          enter: (d: number) => ({ opacity: 0, x: d * shift }),
-          center: { opacity: 1, x: 0 },
-          exit: (d: number) => ({ opacity: 0, x: -d * shift }),
+          enter: (d: number) => ({ opacity: 0, x: d * shift, filter: reduced ? 'none' : 'blur(3px)' }),
+          center: {
+            opacity: 1,
+            x: 0,
+            filter: 'blur(0px)',
+            transitionEnd: { filter: 'none' },
+            transition: { duration: reduced ? 0.01 : 0.34, ease: EASE_OUT },
+          },
+          exit: (d: number) => ({
+            opacity: 0,
+            x: -d * shift * 0.6,
+            filter: reduced ? 'none' : 'blur(3px)',
+            transition: { duration: reduced ? 0.01 : 0.16, ease: 'easeIn' },
+          }),
         }}
         initial="enter"
         animate="center"
         exit="exit"
-        transition={{ duration: reduced ? 0.01 : 0.22, ease: [0.22, 1, 0.36, 1] }}
         onAnimationStart={(def) => def === 'center' && window.scrollTo({ top: 0 })}
       >
         <Routes location={location}>
