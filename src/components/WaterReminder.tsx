@@ -5,12 +5,12 @@ import { createPortal } from 'react-dom'
 import { todayISO } from '../lib/dates'
 
 // Pop-up « pub » qui rappelle de boire de l'eau.
-// Apparaît quelques secondes après l'arrivée sur le site, puis au plus toutes les 2 h.
+// Apparaît quelques secondes après l'arrivée sur le site, puis 4 h après « j’i bu », ou 2 h si elle repousse.
 // L'état est propre à chaque téléphone (localStorage), c'est voulu.
 
 const FIRST_DELAY = 5_000
-const AFTER_DRINK = 2 * 60 * 60 * 1000
-const AFTER_SNOOZE = 30 * 60 * 1000
+const AFTER_DRINK = 4 * 60 * 60 * 1000
+const AFTER_SNOOZE = 2 * 60 * 60 * 1000
 const KEY_NEXT = 'stella.water.next'
 const KEY_COUNT = 'stella.water.count'
 
@@ -131,7 +131,7 @@ export function WaterReminder({ sponsor }: { sponsor: string }) {
                 C’est fait 💧
               </button>
               <button type="button" className="mt-3 text-sm text-mist" onClick={() => close(AFTER_SNOOZE)}>
-                Dans 30 minutes
+                Dans 2 heures
               </button>
             </div>
           </motion.div>
