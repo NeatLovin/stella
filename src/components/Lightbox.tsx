@@ -71,6 +71,7 @@ export function Lightbox({ images, index, onIndexChange, onClose }: Props) {
           tabIndex={-1}
           className="fixed inset-0 z-[70] outline-none touch-none overflow-hidden bg-black select-none"
           role="dialog"
+          data-lightbox
           aria-modal
           aria-label={image.alt || 'Photo en plein écran'}
           initial={{ opacity: 0 }}

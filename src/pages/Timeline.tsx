@@ -1,5 +1,5 @@
-import { motion } from 'motion/react'
-import { useEffect, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
 import { Lightbox } from '../components/Lightbox'
 import { IconExternal } from '../components/icons'
@@ -10,6 +10,7 @@ import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery'
 import { api, type TimelineEvent } from '../lib/api'
 import { diffDays, formatRange, formatShort, todayISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
+import { EASE_OUT } from '../lib/motion'
 import { parseSpotify, spotifyEmbedUrl, spotifyOpenUrl } from '../lib/spotify'
 
 // Positions horizontales (fraction de la largeur) : une constellation irrégulière mais stable
@@ -22,19 +23,63 @@ export function Timeline() {
   const urls = useImageUrls((data ?? []).map((e) => e.image_path))
   const desktop = useMediaQuery(DESKTOP)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const sorted = useMemo(() => [...(data ?? [])].sort((a, b) => a.date_start.localeCompare(b.date_start)), [data])
   // Sur ordinateur, la fiche reste affichée à droite : par défaut, le souvenir le plus récent
-  const latest = data?.length ? [...data].sort((a, b) => a.date_start.localeCompare(b.date_start)).at(-1)! : null
-  const selected = data?.find((e) => e.id === selectedId) ?? (desktop ? latest : null)
+  const latest = sorted.at(-1) ?? null
+  const selected = sorted.find((e) => e.id === selectedId) ?? (desktop ? latest : null)
+  const index = selected ? sorted.findIndex((e) => e.id === selected.id) : -1
+  const [dir, setDir] = useState(0)
+
+  // Souvenir précédent (-1) ou suivant (+1), dans l'ordre chronologique
+  const goTo = (d: number) => {
+    const target = sorted[index + d]
+    if (!target) return
+    setDir(d)
+    setSelectedId(target.id)
+    document.querySelector(`[data-event="${target.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: desktop ? 'nearest' : 'center' })
+  }
+
+  // Flèches du clavier ← →, sauf pendant une saisie
+  useEffect(() => {
+    if (!selected) return
+    const onKey = (ev: KeyboardEvent) => {
+      const t = ev.target as HTMLElement | null
+      if (t?.closest('input, textarea, select, [contenteditable="true"]') || ev.altKey || ev.ctrlKey || ev.metaKey) return
+      // La photo en plein écran garde ses propres flèches
+      if (document.querySelector('[data-lightbox]')) return
+      if (ev.key === 'ArrowLeft') goTo(-1)
+      else if (ev.key === 'ArrowRight') goTo(1)
+      else return
+      ev.preventDefault()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   const detail = selected && (
-    <EventDetail key={selected.id} event={selected} src={selected.image_path ? urls[selected.image_path] : undefined} onChanged={reload} />
+    <EventPager
+      id={selected.id}
+      dir={dir}
+      index={index}
+      total={sorted.length}
+      prev={sorted[index - 1]}
+      next={sorted[index + 1]}
+      onGo={goTo}
+    >
+      <EventDetail
+        key={selected.id}
+        event={selected}
+        src={selected.image_path ? urls[selected.image_path] : undefined}
+        onChanged={reload}
+      />
+    </EventPager>
   )
 
   return (
     <Page
       wide
       title="Notre constellation"
-      intro={`Chaque étoile est un moment à nous. ${desktop ? 'Clique' : 'Touche'}-en une pour la revoir.`}
+      intro={`Chaque étoile est un moment à nous. ${desktop ? 'Clique-en une pour la revoir, puis voyage de l’une à l’autre avec ← →.' : 'Touche-en une pour la revoir, puis glisse pour passer à la suivante.'}`}
     >
       {loading && <Skeleton variant="timeline" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
@@ -160,7 +205,8 @@ function Constellation({
           return (
             <motion.li
               key={e.id}
-              className="absolute"
+              data-event={e.id}
+              className="absolute scroll-my-32"
               style={{ left: `${x * 100}%`, top: y }}
               initial={{ opacity: 0, scale: 0.4 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -233,6 +279,102 @@ function Constellation({
           )
         })}
       </ol>
+    </div>
+  )
+}
+
+/**
+ * Passe d'un souvenir à l'autre : boutons Précédent / Suivant collés en bas de la fiche,
+ * glissement du doigt vers la gauche ou la droite, et flèches du clavier.
+ */
+function EventPager({
+  id,
+  dir,
+  index,
+  total,
+  prev,
+  next,
+  onGo,
+  children,
+}: {
+  id: string
+  dir: number
+  index: number
+  total: number
+  prev?: TimelineEvent
+  next?: TimelineEvent
+  onGo: (d: number) => void
+  children: ReactNode
+}) {
+  const box = useRef<HTMLDivElement>(null)
+
+  // Nouveau souvenir : on remonte en haut de la fiche
+  useEffect(() => {
+    let el = box.current?.parentElement ?? null
+    while (el && !(el.scrollHeight > el.clientHeight && /(auto|scroll)/.test(getComputedStyle(el).overflowY))) el = el.parentElement
+    el?.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [id])
+
+  const navButton = (d: -1 | 1, target?: TimelineEvent) => (
+    <button
+      type="button"
+      disabled={!target}
+      onClick={() => onGo(d)}
+      aria-label={target ? `${d < 0 ? 'Souvenir précédent' : 'Souvenir suivant'} : ${target.title}` : undefined}
+      className={`press flex min-w-0 flex-1 items-center gap-2 rounded-2xl border border-glow/20 px-3 py-2.5 disabled:pointer-events-none disabled:opacity-30 hover:border-glow/50 ${
+        d < 0 ? 'text-left' : 'flex-row-reverse text-right'
+      }`}
+    >
+      <span className="flex-none text-xl leading-none text-glow" aria-hidden>
+        {d < 0 ? '‹' : '›'}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-xs text-mist">{d < 0 ? 'Précédent' : 'Suivant'}</span>
+        <span className="block truncate text-sm">{target ? target.title : '—'}</span>
+      </span>
+    </button>
+  )
+
+  return (
+    <div ref={box}>
+      <div className="overflow-x-clip">
+        <AnimatePresence mode="wait" initial={false} custom={dir}>
+          <motion.div
+            key={id}
+            custom={dir}
+            variants={{
+              enter: (d: number) => ({ opacity: 0, x: d * 48 }),
+              center: { opacity: 1, x: 0 },
+              exit: (d: number) => ({ opacity: 0, x: d * -48 }),
+            }}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.24, ease: EASE_OUT }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={{ left: next ? 0.35 : 0.08, right: prev ? 0.35 : 0.08 }}
+            dragDirectionLock
+            onDragEnd={(_, info) => {
+              if ((info.offset.x < -70 || info.velocity.x < -500) && next) onGo(1)
+              else if ((info.offset.x > 70 || info.velocity.x > 500) && prev) onGo(-1)
+            }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <nav
+        aria-label="Passer d’un souvenir à l’autre"
+        className="sticky bottom-0 z-10 -mx-2 mt-4 flex items-center gap-2 bg-gradient-to-t from-sky from-70% to-transparent px-2 pt-6 pb-1"
+      >
+        {navButton(-1, prev)}
+        <span className="flex-none px-1 text-xs text-mist tabular-nums" aria-live="polite">
+          {index + 1} / {total}
+        </span>
+        {navButton(1, next)}
+      </nav>
     </div>
   )
 }
