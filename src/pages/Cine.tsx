@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
+import { useSearchParams } from 'react-router-dom'
 import { BottomSheet } from '../components/BottomSheet'
 import { IconExternal, IconFilm, IconPlus } from '../components/icons'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
@@ -21,16 +22,7 @@ import {
   type FilmCategory,
   type SearchResult,
 } from '../lib/films'
-import { EASE_OUT, SPRING, SPRING_POP } from '../lib/motion'
-
-const TAB_KEY = 'stella.cine.tab'
-const readTab = () => {
-  try {
-    return localStorage.getItem(TAB_KEY)
-  } catch {
-    return null
-  }
-}
+import { EASE_OUT, SPRING_POP } from '../lib/motion'
 
 interface CineData {
   categories: FilmCategory[]
@@ -42,15 +34,19 @@ const loadCine = async (): Promise<CineData> => {
 }
 
 type CatEditing = { mode: 'new' } | { mode: 'edit'; cat: FilmCategory }
+/** Films montrés dans chaque rangée avant « Tout voir » */
+const ROW_MAX = 12
 
 export function Cine() {
   const { data, error, loading, reload, setData } = useLoad(loadCine, 'cine')
   const [token, setToken] = useState<string | null>(null)
-  const [tab, setTab] = useState<string | null>(readTab)
+  // Catégorie ouverte dans l'adresse (?c=…) : le retour arrière du téléphone ramène à toutes les catégories
+  const [params, setParams] = useSearchParams()
   const [openFilm, setOpenFilm] = useState<Film | null>(null)
-  const [adding, setAdding] = useState(false)
+  const [addingTo, setAddingTo] = useState<FilmCategory | null>(null)
   const [catEditing, setCatEditing] = useState<CatEditing | null>(null)
-  const [drawing, setDrawing] = useState(false)
+  // undefined : fermé ; null : toutes les catégories ; sinon la catégorie de départ du tirage
+  const [drawFrom, setDrawFrom] = useState<string | null | undefined>(undefined)
 
   // Le jeton TMDB n'est jamais gardé dans le cache de l'appareil
   useEffect(() => {
@@ -60,18 +56,19 @@ export function Cine() {
       .catch(() => setToken(null))
   }, [])
 
-  const categories = data?.categories ?? []
+  const categories = useMemo(() => [...(data?.categories ?? [])].sort((a, b) => a.position - b.position), [data])
   const films = useMemo(() => data?.films ?? [], [data])
-  const active = categories.find((c) => c.id === tab) ?? categories[0] ?? null
-  const shown = active ? films.filter((f) => f.category_id === active.id) : []
+  const byCat = useMemo(() => {
+    const m = new Map<string, Film[]>()
+    for (const f of films) m.set(f.category_id, [...(m.get(f.category_id) ?? []), f])
+    return m
+  }, [films])
+  const opened = categories.find((c) => c.id === params.get('c')) ?? null
 
-  const chooseTab = (id: string) => {
-    setTab(id)
-    try {
-      localStorage.setItem(TAB_KEY, id)
-    } catch {
-      /* rien à retenir */
-    }
+  const openCat = (id: string | null) => {
+    if (id) setParams({ c: id })
+    else if (params.get('c')) window.history.back()
+    window.scrollTo({ top: 0 })
   }
 
   const patchFilm = (id: string, patch: Partial<Film>) =>
@@ -107,7 +104,22 @@ export function Cine() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, data])
 
+  // Monter / descendre une catégorie : on renumérote toutes les positions
+  const moveCategory = async (id: string, d: -1 | 1) => {
+    const order = [...categories]
+    const i = order.findIndex((c) => c.id === id)
+    const j = i + d
+    if (i < 0 || j < 0 || j >= order.length) return
+    ;[order[i], order[j]] = [order[j], order[i]]
+    const changed = order
+      .map((c, k) => ({ ...c, position: k + 1 }))
+      .filter((c, k) => categories.find((x) => x.id === c.id)!.position !== k + 1)
+    await Promise.all(changed.map((c) => api.updateFilmCategory(c.id, { position: c.position })))
+    setData((dd) => dd && { ...dd, categories: dd.categories.map((c) => changed.find((x) => x.id === c.id) ?? c) })
+  }
+
   const pending = films.filter((f) => f.tmdb_id === null).length
+  const shown = opened ? (byCat.get(opened.id) ?? []) : []
 
   return (
     <Page title="Ciné à deux" intro="Nos films à regarder ensemble, rangés par envie." wide>
@@ -116,83 +128,55 @@ export function Cine() {
       ) : error && !data ? (
         <ErrorNote message={error} onRetry={reload} />
       ) : (
-        <>
-          <button type="button" className="btn-primary mb-8 w-full sm:w-auto" onClick={() => setDrawing(true)} disabled={!films.length}>
-            <span aria-hidden>🎲</span> Ce soir on regarde quoi ?
-          </button>
-
-          {!token && !isDemo && pending > 0 && (
-            <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 text-sm text-mist">
-              Les affiches arriveront dès que la clé TMDB sera enregistrée dans les réglages.
-            </p>
-          )}
-
-          {/* Catégories */}
-          <div className="-mx-5 mb-6 overflow-x-auto px-5 [scrollbar-width:none] lg:mx-0 lg:px-0">
-            <div className="flex w-max gap-2 pb-1">
-              <div className="flex gap-2" role="tablist" aria-label="Catégories">
-                {categories.map((c) => {
-                  const on = active?.id === c.id
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
-                      role="tab"
-                      aria-selected={on}
-                      onClick={() => chooseTab(c.id)}
-                      className={`press relative rounded-full px-4 py-2 text-sm whitespace-nowrap ${on ? 'text-white' : 'text-mist hover:text-starlight'}`}
-                    >
-                      {on && (
-                        <motion.span
-                          layoutId="cine-tab"
-                          className="absolute inset-0 rounded-full bg-electric shadow-[0_0_18px_rgb(46_91_255/0.5)]"
-                          transition={SPRING}
-                          aria-hidden
-                        />
-                      )}
-                      <span className="relative">
-                        <span aria-hidden>{c.emoji} </span>
-                        {c.name}
-                        <span className="ml-1.5 text-xs opacity-70">{films.filter((f) => f.category_id === c.id).length}</span>
-                      </span>
-                    </button>
-                  )
-                })}
+        <AnimatePresence mode="wait" initial={false}>
+          {opened ? (
+            // ----- Une catégorie en entier -----
+            <motion.div
+              key={opened.id}
+              initial={{ opacity: 0, x: 32 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 32 }}
+              transition={{ duration: 0.25, ease: EASE_OUT }}
+            >
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => openCat(null)}
+                  className="press -ml-2 flex items-center gap-1 rounded-full px-2 py-1 text-sm text-glow hover:text-starlight"
+                >
+                  <span className="text-lg leading-none" aria-hidden>
+                    ‹
+                  </span>{' '}
+                  Toutes les catégories
+                </button>
+                <button
+                  type="button"
+                  className="press -mr-2 rounded-full px-2 py-1 text-sm text-mist hover:text-starlight"
+                  onClick={() => setCatEditing({ mode: 'edit', cat: opened })}
+                >
+                  Modifier
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setCatEditing({ mode: 'new' })}
-                className="press flex items-center gap-1 rounded-full border border-dashed border-glow/30 px-4 py-2 text-sm whitespace-nowrap text-mist hover:text-starlight"
-              >
-                <IconPlus width={16} height={16} /> Catégorie
-              </button>
-            </div>
-          </div>
-
-          {active ? (
-            <>
-              <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-                <div className="min-w-0">
-                  <h2 className="font-display text-3xl">
-                    <span aria-hidden>{active.emoji} </span>
-                    {active.name}
-                  </h2>
-                  {active.blurb && <p className="mt-1 text-mist">{active.blurb}</p>}
-                </div>
-                <div className="flex gap-2">
+              <div className="mb-6">
+                <h2 className="font-display text-[2rem] leading-tight">
+                  <span aria-hidden>{opened.emoji} </span>
+                  {opened.name}
+                </h2>
+                {opened.blurb && <p className="mt-1 max-w-[40ch] text-mist">{opened.blurb}</p>}
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
-                    className="btn-ghost px-4 py-2 text-sm"
-                    onClick={() => setCatEditing({ mode: 'edit', cat: active })}
+                    className="btn-primary px-4 py-2 text-sm"
+                    onClick={() => setDrawFrom(opened.id)}
+                    disabled={!shown.length}
                   >
-                    Modifier
+                    <span aria-hidden>🎲</span> Tirer au sort
                   </button>
-                  <button type="button" className="btn-ghost px-4 py-2 text-sm" onClick={() => setAdding(true)}>
+                  <button type="button" className="btn-ghost px-4 py-2 text-sm" onClick={() => setAddingTo(opened)}>
                     <IconPlus width={16} height={16} /> Ajouter un film
                   </button>
                 </div>
               </div>
-
               {shown.length ? (
                 <ul className="grid grid-cols-3 gap-x-3 gap-y-6 sm:grid-cols-4 lg:grid-cols-6 lg:gap-x-5 lg:gap-y-8">
                   <AnimatePresence initial>
@@ -205,7 +189,7 @@ export function Cine() {
                           opacity: 1,
                           y: 0,
                           scale: 1,
-                          transition: { delay: Math.min(i, 12) * 0.035, duration: 0.45, ease: EASE_OUT },
+                          transition: { delay: Math.min(i, 12) * 0.03, duration: 0.45, ease: EASE_OUT },
                         }}
                         exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
                       >
@@ -217,14 +201,58 @@ export function Cine() {
               ) : (
                 <p className="text-mist">Aucun film ici pour l’instant. Ajoutez-en un !</p>
               )}
-            </>
+            </motion.div>
           ) : (
-            <div className="glass rounded-3xl px-6 py-10 text-center">
-              <IconFilm width={36} height={36} className="mx-auto text-glow" />
-              <p className="mt-4 text-mist">Créez une première catégorie pour commencer vos listes.</p>
-            </div>
+            // ----- Toutes les catégories, en rangées -----
+            <motion.div
+              key="all"
+              initial={{ opacity: 0, x: -32 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -32 }}
+              transition={{ duration: 0.25, ease: EASE_OUT }}
+            >
+              <button
+                type="button"
+                className="btn-primary mb-8 w-full sm:w-auto"
+                onClick={() => setDrawFrom(null)}
+                disabled={!films.length}
+              >
+                <span aria-hidden>🎲</span> Ce soir on regarde quoi ?
+              </button>
+
+              {!token && !isDemo && pending > 0 && (
+                <p className="mb-6 rounded-2xl border border-gold/30 bg-gold/5 px-4 py-3 text-sm text-mist">
+                  Les affiches arriveront dès que la clé TMDB sera enregistrée dans les réglages.
+                </p>
+              )}
+
+              {categories.length ? (
+                <div className="space-y-10">
+                  {categories.map((c, i) => (
+                    <CategoryRow
+                      key={c.id}
+                      cat={c}
+                      films={byCat.get(c.id) ?? []}
+                      index={i}
+                      onOpen={() => openCat(c.id)}
+                      onFilm={setOpenFilm}
+                      onAdd={() => setAddingTo(c)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="glass rounded-3xl px-6 py-10 text-center">
+                  <IconFilm width={36} height={36} className="mx-auto text-glow" />
+                  <p className="mt-4 text-mist">Créez une première catégorie pour commencer vos listes.</p>
+                </div>
+              )}
+
+              <button type="button" className="btn-ghost mt-10" onClick={() => setCatEditing({ mode: 'new' })}>
+                <IconPlus width={16} height={16} /> Nouvelle catégorie
+              </button>
+            </motion.div>
           )}
-        </>
+        </AnimatePresence>
       )}
 
       <BottomSheet open={Boolean(openFilm)} onClose={() => setOpenFilm(null)} label={openFilm?.title ?? 'Film'}>
@@ -246,15 +274,19 @@ export function Cine() {
         )}
       </BottomSheet>
 
-      <BottomSheet open={adding} onClose={() => setAdding(false)} label={`Ajouter un film${active ? ` · ${active.name}` : ''}`}>
-        {adding && active && (
+      <BottomSheet
+        open={Boolean(addingTo)}
+        onClose={() => setAddingTo(null)}
+        label={`Ajouter un film${addingTo ? ` · ${addingTo.name}` : ''}`}
+      >
+        {addingTo && (
           <AddFilm
             token={token}
-            category={active}
-            existing={shown}
+            category={addingTo}
+            existing={byCat.get(addingTo.id) ?? []}
             onAdd={async (input) => {
               const position = Math.max(0, ...films.map((f) => f.position)) + 1
-              const film = await api.addFilm({ ...input, category_id: active.id, position })
+              const film = await api.addFilm({ ...input, category_id: addingTo.id, position })
               setData((d) => d && { ...d, films: [...d.films, film] })
             }}
           />
@@ -270,7 +302,10 @@ export function Cine() {
           <CategoryForm
             key={catEditing.mode === 'edit' ? catEditing.cat.id : 'new'}
             cat={catEditing.mode === 'edit' ? catEditing.cat : undefined}
-            count={catEditing.mode === 'edit' ? films.filter((f) => f.category_id === catEditing.cat.id).length : 0}
+            count={catEditing.mode === 'edit' ? (byCat.get(catEditing.cat.id)?.length ?? 0) : 0}
+            rank={catEditing.mode === 'edit' ? categories.findIndex((c) => c.id === catEditing.cat.id) : -1}
+            total={categories.length}
+            onReorder={catEditing.mode === 'edit' ? (d) => moveCategory(catEditing.cat.id, d) : undefined}
             onSave={async (values) => {
               if (catEditing.mode === 'edit') {
                 await api.updateFilmCategory(catEditing.cat.id, values)
@@ -279,7 +314,7 @@ export function Cine() {
                 const position = Math.max(0, ...categories.map((c) => c.position)) + 1
                 const cat = await api.addFilmCategory({ ...values, position })
                 setData((d) => d && { ...d, categories: [...d.categories, cat] })
-                chooseTab(cat.id)
+                openCat(cat.id)
               }
               setCatEditing(null)
             }}
@@ -293,6 +328,7 @@ export function Cine() {
                         d && { categories: d.categories.filter((c) => c.id !== id), films: d.films.filter((f) => f.category_id !== id) },
                     )
                     setCatEditing(null)
+                    if (opened?.id === id) openCat(null)
                   }
                 : undefined
             }
@@ -300,8 +336,89 @@ export function Cine() {
         )}
       </BottomSheet>
 
-      <DrawOverlay open={drawing} onClose={() => setDrawing(false)} films={films} categories={categories} initialCategory={null} />
+      <DrawOverlay
+        open={drawFrom !== undefined}
+        onClose={() => setDrawFrom(undefined)}
+        films={films}
+        categories={categories}
+        initialCategory={drawFrom ?? null}
+      />
     </Page>
+  )
+}
+
+/** Une rangée façon Netflix : en-tête cliquable et affiches qui défilent du doigt. */
+function CategoryRow({
+  cat,
+  films,
+  index,
+  onOpen,
+  onFilm,
+  onAdd,
+}: {
+  cat: FilmCategory
+  films: Film[]
+  index: number
+  onOpen: () => void
+  onFilm: (f: Film) => void
+  onAdd: () => void
+}) {
+  const visible = films.slice(0, ROW_MAX)
+  const more = films.length - visible.length
+  return (
+    <motion.section
+      aria-label={cat.name}
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '0px 0px -40px 0px' }}
+      transition={{ duration: 0.5, ease: EASE_OUT, delay: Math.min(index, 3) * 0.06 }}
+    >
+      <button type="button" onClick={onOpen} className="group flex w-full items-end justify-between gap-3 text-left">
+        <span className="min-w-0">
+          <span className="font-display block truncate text-[1.6rem] leading-tight">
+            <span aria-hidden>{cat.emoji} </span>
+            {cat.name}
+          </span>
+          {cat.blurb && <span className="mt-0.5 block truncate text-sm text-mist">{cat.blurb}</span>}
+        </span>
+        <span className="flex flex-none items-center gap-1 pb-0.5 text-sm text-glow transition-transform group-hover:translate-x-0.5">
+          {films.length} film{films.length > 1 ? 's' : ''}
+          <span className="text-lg leading-none" aria-hidden>
+            ›
+          </span>
+          <span className="sr-only">, tout voir</span>
+        </span>
+      </button>
+
+      <div className="-mx-5 mt-3 snap-x snap-mandatory scroll-px-5 overflow-x-auto px-5 pb-2 [scrollbar-width:none] lg:mx-0 lg:scroll-px-0 lg:px-0 lg:[mask-image:linear-gradient(to_right,black_90%,transparent)] [&::-webkit-scrollbar]:hidden">
+        <ul className="flex w-max gap-3 lg:gap-4">
+          {visible.map((f) => (
+            <li key={f.id} className="w-[26vw] max-w-[9.5rem] flex-none snap-start">
+              <FilmCard film={f} onOpen={() => onFilm(f)} compact />
+            </li>
+          ))}
+          <li className="w-[26vw] max-w-[9.5rem] flex-none snap-start">
+            <button
+              type="button"
+              onClick={more > 0 ? onOpen : onAdd}
+              className="press flex aspect-[2/3] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-glow/30 text-sm text-mist hover:border-glow/60 hover:text-starlight"
+            >
+              {more > 0 ? (
+                <>
+                  <span className="font-display text-2xl text-starlight">+{more}</span>
+                  Tout voir
+                </>
+              ) : (
+                <>
+                  <IconPlus width={22} height={22} />
+                  Ajouter
+                </>
+              )}
+            </button>
+          </li>
+        </ul>
+      </div>
+    </motion.section>
   )
 }
 
@@ -340,8 +457,8 @@ function Poster({
   )
 }
 
-function FilmCard({ film, onOpen }: { film: Film; onOpen: () => void }) {
-  const meta = [film.year, formatRuntime(film.runtime)].filter(Boolean).join(' · ')
+function FilmCard({ film, onOpen, compact }: { film: Film; onOpen: () => void; compact?: boolean }) {
+  const meta = compact ? (film.year ? String(film.year) : '') : [film.year, formatRuntime(film.runtime)].filter(Boolean).join(' · ')
   return (
     <button
       type="button"
@@ -353,7 +470,7 @@ function FilmCard({ film, onOpen }: { film: Film; onOpen: () => void }) {
         film={film}
         className="transition-[transform,box-shadow] duration-500 group-hover:-translate-y-1 group-hover:shadow-[0_14px_40px_rgb(46_91_255/0.3)]"
       />
-      <p className="mt-2 line-clamp-2 text-[0.9rem] leading-snug">{film.title}</p>
+      <p className={`mt-2 leading-snug ${compact ? 'line-clamp-1 text-[0.85rem]' : 'line-clamp-2 text-[0.9rem]'}`}>{film.title}</p>
       {meta && <p className="mt-0.5 text-xs text-mist">{meta}</p>}
     </button>
   )
@@ -611,11 +728,17 @@ function AddFilm({
 function CategoryForm({
   cat,
   count,
+  rank,
+  total,
+  onReorder,
   onSave,
   onDelete,
 }: {
   cat?: FilmCategory
   count: number
+  rank: number
+  total: number
+  onReorder?: (d: -1 | 1) => Promise<void>
   onSave: (v: { name: string; emoji: string; blurb: string }) => Promise<void>
   onDelete?: () => Promise<void>
 }) {
@@ -664,6 +787,33 @@ function CategoryForm({
           placeholder="Sous la couette, avec un chocolat chaud"
         />
       </label>
+      {onReorder && total > 1 && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-glow/15 px-4 py-2.5">
+          <span className="text-sm text-mist">
+            Place dans la liste : {rank + 1} / {total}
+          </span>
+          <span className="flex gap-1">
+            <button
+              type="button"
+              className="press rounded-full px-3 py-1.5 text-sm text-glow disabled:opacity-30"
+              disabled={busy || rank <= 0}
+              onClick={() => void run(() => onReorder(-1).then(() => setBusy(false)))}
+              aria-label="Monter la catégorie"
+            >
+              ↑ Monter
+            </button>
+            <button
+              type="button"
+              className="press rounded-full px-3 py-1.5 text-sm text-glow disabled:opacity-30"
+              disabled={busy || rank >= total - 1}
+              onClick={() => void run(() => onReorder(1).then(() => setBusy(false)))}
+              aria-label="Descendre la catégorie"
+            >
+              ↓ Descendre
+            </button>
+          </span>
+        </div>
+      )}
       <button type="submit" className="btn-primary w-full" disabled={busy || !name.trim()}>
         {cat ? 'Enregistrer' : 'Créer la catégorie'}
       </button>
@@ -725,6 +875,11 @@ function DrawOverlay({
   const timers = useRef<number[]>([])
 
   const pool = useMemo(() => eligible(films, filter), [films, filter])
+
+  // À chaque ouverture : on repart de la catégorie d'où l'on vient
+  useEffect(() => {
+    if (open) setFilter({ categoryId: initialCategory, maxRuntime: null })
+  }, [open, initialCategory])
 
   useEffect(() => {
     if (!open) return

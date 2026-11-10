@@ -77,6 +77,9 @@ export function createDemoApi(): Api {
     { id: 'cat-1', name: 'Classiques', emoji: '🔥', blurb: 'Catégorie de démonstration.', position: 1 },
     { id: 'cat-2', name: 'Noël', emoji: '🎄', blurb: 'Plaid et chocolat chaud.', position: 2 },
     { id: 'cat-3', name: 'À découvrir', emoji: '🌠', blurb: 'Jamais vus, ni l’un ni l’autre.', position: 3 },
+    { id: 'cat-4', name: 'Romance', emoji: '💞', blurb: 'Main dans la main.', position: 4 },
+    { id: 'cat-5', name: 'Horreur', emoji: '🔪', blurb: 'Sous le plaid.', position: 5 },
+    { id: 'cat-6', name: 'Fous rires', emoji: '😂', blurb: 'Pour rire aux éclats.', position: 6 },
   ]
   const demoFilm = (i: number, category_id: string, title: string, year: number, runtime: number): Film => ({
     id: `film-${i}`,
@@ -102,6 +105,12 @@ export function createDemoApi(): Api {
     ['cat-3', 'Pépite inconnue', 2013, 123],
     ['cat-3', 'Film d’animation', 1997, 134],
     ['cat-3', 'Thriller', 2016, 106],
+    ...Array.from({ length: 10 }, (_, k) => ['cat-1', `Classique n° ${k + 5}`, 1990 + k, 100 + k * 5]),
+    ['cat-4', 'Histoire d’amour', 2004, 123],
+    ['cat-4', 'Comédie romantique', 1999, 124],
+    ['cat-5', 'Maison hantée', 2013, 112],
+    ['cat-5', 'Film qui fait peur', 2018, 127],
+    ['cat-6', 'Comédie culte', 1993, 107],
   ].map(([c, t, y, r], i) => demoFilm(i + 1, c as string, t as string, y as number, r as number))
 
   // Quelques symptômes qui reviennent, pour montrer « Ce qui revient »
