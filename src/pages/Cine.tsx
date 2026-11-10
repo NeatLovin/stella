@@ -365,6 +365,34 @@ function CategoryRow({
 }) {
   const visible = films.slice(0, ROW_MAX)
   const more = films.length - visible.length
+  const scroller = useRef<HTMLDivElement>(null)
+  const [edges, setEdges] = useState({ start: true, end: false })
+  const update = () => {
+    const el = scroller.current
+    if (!el) return
+    setEdges({ start: el.scrollLeft < 8, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 8 })
+  }
+  useEffect(() => {
+    update()
+    const el = scroller.current
+    if (!el) return
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [films.length])
+  const page = (d: -1 | 1) => scroller.current?.scrollBy({ left: d * scroller.current.clientWidth * 0.85, behavior: 'smooth' })
+  const arrow = (d: -1 | 1) => (
+    <button
+      type="button"
+      onClick={() => page(d)}
+      aria-label={d < 0 ? `Films précédents · ${cat.name}` : `Films suivants · ${cat.name}`}
+      className={`press glass absolute top-[38%] z-10 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full text-2xl leading-none text-starlight shadow-[0_6px_20px_rgb(0_0_0/0.4)] transition-opacity [@media(hover:hover)]:flex ${
+        d < 0 ? '-left-3' : '-right-3'
+      } ${(d < 0 ? edges.start : edges.end) ? 'pointer-events-none opacity-0' : 'opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100'}`}
+    >
+      <span aria-hidden>{d < 0 ? '‹' : '›'}</span>
+    </button>
+  )
   return (
     <motion.section
       aria-label={cat.name}
@@ -390,33 +418,43 @@ function CategoryRow({
         </span>
       </button>
 
-      <div className="-mx-5 mt-3 snap-x snap-mandatory scroll-px-5 overflow-x-auto px-5 pb-2 [scrollbar-width:none] lg:mx-0 lg:scroll-px-0 lg:px-0 lg:[mask-image:linear-gradient(to_right,black_90%,transparent)] [&::-webkit-scrollbar]:hidden">
-        <ul className="flex w-max gap-3 lg:gap-4">
-          {visible.map((f) => (
-            <li key={f.id} className="w-[26vw] max-w-[9.5rem] flex-none snap-start">
-              <FilmCard film={f} onOpen={() => onFilm(f)} compact />
+      <div className="group/row relative">
+        {arrow(-1)}
+        {arrow(1)}
+        <div
+          ref={scroller}
+          onScroll={update}
+          className={`-mx-5 mt-3 snap-x snap-mandatory scroll-px-5 overflow-x-auto px-5 pb-2 [scrollbar-width:none] lg:mx-0 lg:scroll-px-0 lg:px-0 [&::-webkit-scrollbar]:hidden ${
+            edges.end ? '' : 'lg:[mask-image:linear-gradient(to_right,black_88%,transparent)]'
+          }`}
+        >
+          <ul className="flex w-max gap-3 lg:gap-4">
+            {visible.map((f) => (
+              <li key={f.id} className="w-[26vw] max-w-[9.5rem] flex-none snap-start">
+                <FilmCard film={f} onOpen={() => onFilm(f)} compact />
+              </li>
+            ))}
+            <li className="w-[26vw] max-w-[9.5rem] flex-none snap-start">
+              <button
+                type="button"
+                onClick={more > 0 ? onOpen : onAdd}
+                className="press flex aspect-[2/3] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-glow/30 text-sm text-mist hover:border-glow/60 hover:text-starlight"
+              >
+                {more > 0 ? (
+                  <>
+                    <span className="font-display text-2xl text-starlight">+{more}</span>
+                    Tout voir
+                  </>
+                ) : (
+                  <>
+                    <IconPlus width={22} height={22} />
+                    Ajouter
+                  </>
+                )}
+              </button>
             </li>
-          ))}
-          <li className="w-[26vw] max-w-[9.5rem] flex-none snap-start">
-            <button
-              type="button"
-              onClick={more > 0 ? onOpen : onAdd}
-              className="press flex aspect-[2/3] w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-glow/30 text-sm text-mist hover:border-glow/60 hover:text-starlight"
-            >
-              {more > 0 ? (
-                <>
-                  <span className="font-display text-2xl text-starlight">+{more}</span>
-                  Tout voir
-                </>
-              ) : (
-                <>
-                  <IconPlus width={22} height={22} />
-                  Ajouter
-                </>
-              )}
-            </button>
-          </li>
-        </ul>
+          </ul>
+        </div>
       </div>
     </motion.section>
   )
@@ -1033,8 +1071,8 @@ function Roulette({
       </div>
 
       {/* Filtres : une ligne qui défile pour les catégories, une pour la durée */}
-      <div className="mt-3 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="flex w-max gap-2">
+      <div className="mt-3 overflow-x-auto px-5 [mask-image:linear-gradient(to_right,black_85%,transparent)] [scrollbar-width:none] sm:overflow-visible sm:[mask-image:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max gap-2 sm:w-auto sm:flex-wrap">
           <button
             type="button"
             aria-pressed={!filter.categoryId}
