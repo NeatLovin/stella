@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'motion/react'
+import { animate, AnimatePresence, motion, useMotionValue } from 'motion/react'
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useSearchParams } from 'react-router-dom'
@@ -428,10 +428,13 @@ function Poster({
   film,
   size = 'w342',
   className = '',
+  eager,
 }: {
   film: Pick<Film, 'poster_path' | 'title'>
   size?: 'w185' | 'w342' | 'w500'
   className?: string
+  /** Chargée tout de suite et affichée sans fondu (roulette du tirage) */
+  eager?: boolean
 }) {
   const src = posterUrl(film.poster_path, size)
   return (
@@ -440,8 +443,9 @@ function Poster({
         <img
           src={src}
           alt=""
-          loading="lazy"
-          className="h-full w-full object-cover opacity-0 transition-opacity duration-700 data-[loaded=true]:opacity-100"
+          loading={eager ? 'eager' : 'lazy'}
+          draggable={false}
+          className={`h-full w-full object-cover ${eager ? '' : 'opacity-0 transition-opacity duration-700 data-[loaded=true]:opacity-100'}`}
           onLoad={(e) => (e.currentTarget.dataset.loaded = 'true')}
           ref={(el) => {
             if (el?.complete && el.naturalWidth) el.dataset.loaded = 'true'
@@ -852,6 +856,31 @@ const DURATIONS: { label: string; max: number | null }[] = [
   { label: '≤ 2 h 15', max: 135 },
 ]
 
+/** Nombre de cartes dans la roulette, et place du film gagnant */
+const REEL_LEN = 40
+const WIN_AT = 33
+const GAP = 12
+
+/** Suite de films pour la roulette : jamais deux fois le même côte à côte (si possible), le gagnant à WIN_AT. */
+function buildReel(pool: Film[], winner: Film): Film[] {
+  const reel: Film[] = []
+  for (let i = 0; i < REEL_LEN; i++) {
+    if (i === WIN_AT) {
+      reel.push(winner)
+      continue
+    }
+    const prev = reel[i - 1]
+    const next = i + 1 === WIN_AT ? winner : null
+    const choices = pool.length > 2 ? pool.filter((f) => f.id !== prev?.id && f.id !== next?.id) : pool
+    reel.push(choices[Math.floor(Math.random() * choices.length)])
+  }
+  return reel
+}
+
+/**
+ * Tirage au sort façon roulette : une bande d'affiches défile sous le repère central,
+ * ralentit et s'arrête sur le film choisi. Une seule animation fluide, affiches préchargées.
+ */
 function DrawOverlay({
   open,
   onClose,
@@ -868,12 +897,6 @@ function DrawOverlay({
   const root = useRef<HTMLDivElement>(null)
   useDialog(open, root, onClose)
   const [filter, setFilter] = useState<DrawFilter>({ categoryId: initialCategory, maxRuntime: null })
-  const [shown, setShown] = useState<Film | null>(null)
-  const [step, setStep] = useState(0)
-  const [phase, setPhase] = useState<'idle' | 'rolling' | 'done'>('idle')
-  const winner = useRef<Film | null>(null)
-  const timers = useRef<number[]>([])
-
   const pool = useMemo(() => eligible(films, filter), [films, filter])
 
   // À chaque ouverture : on repart de la catégorie d'où l'on vient
@@ -892,53 +915,8 @@ function DrawOverlay({
       delete document.body.dataset.playing
       html.style.overflow = prev[0]
       document.body.style.overflow = prev[1]
-      timers.current.forEach(clearTimeout)
-      timers.current = []
-      setPhase('idle')
-      setShown(null)
     }
   }, [open])
-
-  const roll = () => {
-    if (!pool.length) return
-    timers.current.forEach(clearTimeout)
-    timers.current = []
-    const final = draw(pool, winner.current?.id)!
-    winner.current = final
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    if (reduced || pool.length === 1) {
-      setShown(final)
-      setStep((s) => s + 1)
-      setPhase('done')
-      return
-    }
-    setPhase('rolling')
-    // Les affiches défilent de plus en plus lentement, puis s'arrêtent sur le film choisi
-    const N = 16
-    let t = 0
-    let last: Film | null = null
-    for (let i = 0; i < N; i++) {
-      t += 55 + Math.pow(i / N, 2.2) * 380
-      const isLast = i === N - 1
-      const pick: Film = isLast
-        ? final
-        : (draw(
-            pool.filter((f) => f.id !== final.id || pool.length < 3),
-            last?.id,
-          ) ?? final)
-      last = pick
-      timers.current.push(
-        window.setTimeout(() => {
-          setShown(pick)
-          setStep((s) => s + 1)
-          if (isLast) setPhase('done')
-        }, t),
-      )
-    }
-  }
-
-  const chip = (on: boolean) =>
-    `press rounded-full border px-3.5 py-1.5 text-sm whitespace-nowrap ${on ? 'border-glow bg-glow/20 text-starlight' : 'border-glow/20 text-mist hover:text-starlight'}`
 
   return createPortal(
     <AnimatePresence>
@@ -949,139 +927,239 @@ function DrawOverlay({
           aria-modal
           aria-label="Ce soir on regarde quoi ?"
           tabIndex={-1}
-          className="fixed inset-0 z-[65] overflow-y-auto bg-night/95 outline-none backdrop-blur-sm"
+          className="fixed inset-0 z-[65] overflow-hidden bg-night/95 outline-none backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
-          <div className="mx-auto flex min-h-full max-w-[34rem] flex-col px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="font-display text-2xl">Ce soir on regarde quoi ?</h2>
-              <button
-                type="button"
-                onClick={onClose}
-                className="press -mr-2 rounded-full p-2 text-2xl leading-none text-mist hover:text-starlight"
-                aria-label="Fermer"
-              >
-                ×
-              </button>
-            </div>
-
-            {/* Filtres */}
-            <div className="-mx-5 mt-4 overflow-x-auto px-5 [scrollbar-width:none]">
-              <div className="flex w-max gap-2">
-                <button
-                  type="button"
-                  aria-pressed={!filter.categoryId}
-                  className={chip(!filter.categoryId)}
-                  onClick={() => setFilter((f) => ({ ...f, categoryId: null }))}
-                >
-                  Toutes
-                </button>
-                {categories.map((c) => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    aria-pressed={filter.categoryId === c.id}
-                    className={chip(filter.categoryId === c.id)}
-                    onClick={() => setFilter((f) => ({ ...f, categoryId: c.id }))}
-                  >
-                    {c.emoji} {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {DURATIONS.map((d) => (
-                <button
-                  key={d.label}
-                  type="button"
-                  aria-pressed={filter.maxRuntime === d.max}
-                  className={chip(filter.maxRuntime === d.max)}
-                  onClick={() => setFilter((f) => ({ ...f, maxRuntime: d.max }))}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Scène */}
-            <div className="flex flex-1 flex-col items-center justify-center py-6">
-              <div className="relative w-[min(52vw,13rem)] [perspective:900px]">
-                {phase === 'done' && (
-                  <motion.span
-                    aria-hidden
-                    className="absolute -inset-6 rounded-[2rem]"
-                    style={{ background: 'radial-gradient(circle, rgb(46 91 255 / 0.55), transparent 70%)' }}
-                    initial={{ opacity: 0, scale: 0.7 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.6, ease: EASE_OUT }}
-                  />
-                )}
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {shown ? (
-                    <motion.div
-                      key={`${shown.id}-${step}`}
-                      className="relative"
-                      initial={{ rotateY: -80, opacity: 0.4 }}
-                      animate={phase === 'done' ? { rotateY: 0, opacity: 1, scale: [1, 1.06, 1] } : { rotateY: 0, opacity: 1 }}
-                      exit={{ rotateY: 80, opacity: 0 }}
-                      transition={phase === 'done' ? { ...SPRING_POP, scale: { duration: 0.5 } } : { duration: 0.09 }}
-                    >
-                      <Poster film={shown} size="w500" className="shadow-[0_20px_60px_rgb(46_91_255/0.35)]" />
-                    </motion.div>
-                  ) : (
-                    <motion.div key="idle" className="relative" exit={{ opacity: 0 }}>
-                      <div className="flex aspect-[2/3] flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-glow/30 text-center">
-                        <motion.span
-                          className="text-5xl"
-                          animate={{ rotate: [0, -12, 12, 0] }}
-                          transition={{ duration: 1.6, repeat: Infinity, repeatDelay: 0.8 }}
-                          aria-hidden
-                        >
-                          🎲
-                        </motion.span>
-                        <span className="px-4 text-sm text-mist">
-                          {pool.length} film{pool.length > 1 ? 's' : ''} en lice
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              <div aria-live="polite" className="mt-6 min-h-[7.5rem] w-full text-center">
-                {phase === 'done' && shown && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.15, duration: 0.45, ease: EASE_OUT }}
-                  >
-                    <p className="font-display text-3xl leading-tight">{shown.title}</p>
-                    <p className="mt-1 text-sm text-mist">{[shown.year, formatRuntime(shown.runtime)].filter(Boolean).join(' · ')}</p>
-                    {shown.overview && (
-                      <p className="mx-auto mt-3 line-clamp-3 max-w-[30rem] text-sm leading-relaxed text-starlight/85">{shown.overview}</p>
-                    )}
-                  </motion.div>
-                )}
-                {phase !== 'done' && !pool.length && <p className="text-mist">Aucun film ne correspond à ces filtres.</p>}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-3">
-              <button type="button" className="btn-primary min-w-[10rem]" onClick={roll} disabled={!pool.length || phase === 'rolling'}>
-                <span aria-hidden>🎲</span> {phase === 'done' ? 'Relancer' : phase === 'rolling' ? 'Ça tourne…' : 'Lancer'}
-              </button>
-              {phase === 'done' && shown && (
-                <a href={letterboxdUrl(shown)} target="_blank" rel="noreferrer" className="btn-ghost">
-                  Letterboxd <IconExternal width={15} height={15} />
-                </a>
-              )}
-            </div>
-          </div>
+          <Roulette
+            key={`${filter.categoryId}-${filter.maxRuntime}`}
+            pool={pool}
+            filter={filter}
+            setFilter={setFilter}
+            categories={categories}
+            onClose={onClose}
+          />
         </motion.div>
       )}
     </AnimatePresence>,
     document.body,
+  )
+}
+
+function Roulette({
+  pool,
+  filter,
+  setFilter,
+  categories,
+  onClose,
+}: {
+  pool: Film[]
+  filter: DrawFilter
+  setFilter: (f: DrawFilter | ((f: DrawFilter) => DrawFilter)) => void
+  categories: FilmCategory[]
+  onClose: () => void
+}) {
+  const box = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+  const [reel, setReel] = useState<Film[]>(() => (pool.length ? buildReel(pool, draw(pool)!) : []))
+  const [phase, setPhase] = useState<'idle' | 'rolling' | 'done'>('idle')
+  const x = useMotionValue(0)
+  const last = useRef<string | null>(null)
+  const winner = phase === 'done' ? reel[WIN_AT] : null
+
+  // Largeur d'une carte selon l'écran
+  useEffect(() => {
+    const el = box.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth))
+    ro.observe(el)
+    setWidth(el.clientWidth)
+    return () => ro.disconnect()
+  }, [])
+  const card = Math.round(Math.min(Math.max(width * 0.3, 96), 180))
+  const step = card + GAP
+  const offsetFor = (i: number) => width / 2 - card / 2 - i * step
+
+  // Position de départ (quelques cartes avant le centre) dès que la largeur est connue
+  useEffect(() => {
+    if (width && phase === 'idle') x.set(offsetFor(2))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [width, card])
+
+  // Précharge les affiches pour qu'aucune carte ne défile vide
+  useEffect(() => {
+    for (const f of pool) {
+      const src = posterUrl(f.poster_path, 'w185')
+      if (src) new Image().src = src
+    }
+  }, [pool])
+
+  const roll = () => {
+    if (!pool.length || phase === 'rolling') return
+    const pick = draw(pool, last.current)!
+    last.current = pick.id
+    const next = buildReel(pool, pick)
+    // On garde la carte actuellement au centre en première position visible : la relance repart de là
+    const startIndex = 2
+    if (phase === 'done') next[startIndex] = reel[WIN_AT]
+    setReel(next)
+    x.set(offsetFor(startIndex))
+    setPhase('rolling')
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    // Petit décalage aléatoire pour que l'arrêt ne tombe pas toujours pile au milieu de la carte
+    const jitter = (Math.random() - 0.5) * card * 0.5
+    animate(x, offsetFor(WIN_AT) + jitter, {
+      duration: reduced ? 0.01 : 3.6,
+      ease: [0.08, 0.82, 0.17, 1],
+    }).then(() => animate(x, offsetFor(WIN_AT), { type: 'spring', damping: 18, stiffness: 220 }).then(() => setPhase('done')))
+  }
+
+  const chip = (on: boolean) =>
+    `press rounded-full border px-3.5 py-1.5 text-sm whitespace-nowrap ${on ? 'border-glow bg-glow/20 text-starlight' : 'border-glow/20 text-mist hover:text-starlight'}`
+
+  return (
+    <div className="mx-auto flex h-full max-w-[40rem] flex-col pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <div className="flex items-center justify-between gap-3 px-5">
+        <h2 className="font-display text-2xl">Ce soir on regarde quoi ?</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="press -mr-2 rounded-full p-2 text-2xl leading-none text-mist hover:text-starlight"
+          aria-label="Fermer"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Filtres : une ligne qui défile pour les catégories, une pour la durée */}
+      <div className="mt-3 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex w-max gap-2">
+          <button
+            type="button"
+            aria-pressed={!filter.categoryId}
+            className={chip(!filter.categoryId)}
+            disabled={phase === 'rolling'}
+            onClick={() => setFilter((f) => ({ ...f, categoryId: null }))}
+          >
+            Toutes
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              aria-pressed={filter.categoryId === c.id}
+              className={chip(filter.categoryId === c.id)}
+              disabled={phase === 'rolling'}
+              onClick={() => setFilter((f) => ({ ...f, categoryId: c.id }))}
+            >
+              {c.emoji} {c.name}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2 px-5">
+        {DURATIONS.map((d) => (
+          <button
+            key={d.label}
+            type="button"
+            aria-pressed={filter.maxRuntime === d.max}
+            className={chip(filter.maxRuntime === d.max)}
+            disabled={phase === 'rolling'}
+            onClick={() => setFilter((f) => ({ ...f, maxRuntime: d.max }))}
+          >
+            {d.label}
+          </button>
+        ))}
+        <span className="self-center pl-1 text-xs text-mist">
+          {pool.length} film{pool.length > 1 ? 's' : ''} en lice
+        </span>
+      </div>
+
+      <div className="flex min-h-0 flex-1 flex-col justify-center">
+        {/* Roulette */}
+        <div
+          ref={box}
+          className="relative w-full flex-none overflow-hidden py-5 [mask-image:linear-gradient(to_right,transparent,black_18%,black_82%,transparent)]"
+        >
+          {pool.length ? (
+            <>
+              <motion.ul className="flex w-max" style={{ x, gap: GAP }} aria-hidden>
+                {reel.map((f, i) => (
+                  <li key={i} style={{ width: card }} className="flex-none">
+                    <motion.div
+                      animate={
+                        phase === 'done'
+                          ? i === WIN_AT
+                            ? { scale: 1.08, opacity: 1 }
+                            : { scale: 0.94, opacity: 0.35 }
+                          : { scale: 1, opacity: 1 }
+                      }
+                      transition={i === WIN_AT ? SPRING_POP : { duration: 0.4 }}
+                    >
+                      <Poster
+                        film={f}
+                        size="w185"
+                        eager
+                        className={i === WIN_AT && phase === 'done' ? 'shadow-[0_0_40px_rgb(46_91_255/0.7)] ring-2 ring-glow' : ''}
+                      />
+                    </motion.div>
+                  </li>
+                ))}
+              </motion.ul>
+              {/* Repère central : deux petits triangles, et un fil lumineux seulement pendant que ça tourne */}
+              <motion.span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-4 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-glow to-transparent"
+                animate={{ opacity: phase === 'rolling' ? 0.8 : 0 }}
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 text-xs text-glow drop-shadow-[0_0_6px_#7DA2FF]"
+              >
+                ▼
+              </span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2 text-xs text-glow drop-shadow-[0_0_6px_#7DA2FF]"
+              >
+                ▲
+              </span>
+            </>
+          ) : (
+            <p className="py-16 text-center text-mist">Aucun film ne correspond à ces filtres.</p>
+          )}
+        </div>
+
+        {/* Résultat */}
+        <div aria-live="polite" className="min-h-[9.5rem] overflow-y-auto px-5 pt-3 text-center">
+          {winner ? (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: EASE_OUT }}>
+              <p className="text-xs tracking-[0.25em] text-gold uppercase">Ce soir</p>
+              <p className="font-display mt-1 text-[clamp(1.6rem,6vw,2.2rem)] leading-tight">{winner.title}</p>
+              <p className="mt-1 text-sm text-mist">{[winner.year, formatRuntime(winner.runtime)].filter(Boolean).join(' · ')}</p>
+              {winner.overview && (
+                <p className="mx-auto mt-3 line-clamp-4 max-w-[32rem] text-sm leading-relaxed text-starlight/85">{winner.overview}</p>
+              )}
+            </motion.div>
+          ) : (
+            <p className="pt-2 text-sm text-mist">
+              {phase === 'rolling' ? 'Ça tourne…' : 'Choisissez vos envies, puis lancez la roulette.'}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-3 px-5 pt-4">
+        <button type="button" className="btn-primary min-w-[10rem]" onClick={roll} disabled={!pool.length || phase === 'rolling'}>
+          <span aria-hidden>🎲</span> {phase === 'done' ? 'Relancer' : phase === 'rolling' ? 'Ça tourne…' : 'Lancer'}
+        </button>
+        {winner && (
+          <a href={letterboxdUrl(winner)} target="_blank" rel="noreferrer" className="btn-ghost">
+            Letterboxd <IconExternal width={15} height={15} />
+          </a>
+        )}
+      </div>
+    </div>
   )
 }
