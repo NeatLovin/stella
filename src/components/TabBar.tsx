@@ -1,13 +1,14 @@
 import { motion } from 'motion/react'
 import { SPRING, SPRING_POP } from '../lib/motion'
 import { NavLink } from 'react-router-dom'
-import { IconConstellation, IconGift, IconJar, IconMoon, IconStar } from './icons'
+import { IconConstellation, IconFilm, IconGift, IconJar, IconMoon, IconStar } from './icons'
 
 const tabs = [
   { to: '/', label: 'Nous', Icon: IconStar },
   { to: '/timeline', label: 'Timeline', Icon: IconConstellation },
   { to: '/bocal', label: 'Bocal', Icon: IconJar },
   { to: '/wishlist', label: 'Wishlist', Icon: IconGift },
+  { to: '/cine', label: 'Ciné', Icon: IconFilm },
   { to: '/cycle', label: 'Cycle', Icon: IconMoon },
 ]
 
@@ -15,7 +16,7 @@ const tabs = [
 export function TabBar() {
   return (
     <nav aria-label="Navigation" className="tabbar-dock pointer-events-none fixed inset-x-0 z-40 flex justify-center px-3">
-      <ul className="glass pointer-events-auto flex h-[var(--tabbar-h)] w-full max-w-[26rem] items-stretch rounded-full p-1.5">
+      <ul className="glass pointer-events-auto flex h-[var(--tabbar-h)] w-full max-w-[29rem] items-stretch rounded-full p-1.5">
         {tabs.map(({ to, label, Icon }) => (
           <li key={to} className="flex-1">
             <NavLink

@@ -1,5 +1,6 @@
 import { createClient, type Session } from '@supabase/supabase-js'
 import type { Ovulation, Period } from './cycle'
+import type { Film, FilmCategory, FilmInput } from './films'
 import { isEmptyEntry, type SymptomEntry } from './symptoms'
 import type { ISODate } from './dates'
 import { createDemoApi } from './demo'
@@ -94,6 +95,17 @@ export interface Api {
   getOvulations(): Promise<Ovulation[]>
   addOvulation(date: ISODate): Promise<void>
   deleteOvulation(id: string): Promise<void>
+  getFilmCategories(): Promise<FilmCategory[]>
+  getFilms(): Promise<Film[]>
+  addFilm(f: FilmInput): Promise<Film>
+  updateFilm(id: string, patch: Partial<FilmInput>): Promise<void>
+  deleteFilm(id: string): Promise<void>
+  addFilmCategory(c: Omit<FilmCategory, 'id'>): Promise<FilmCategory>
+  updateFilmCategory(id: string, patch: Partial<Omit<FilmCategory, 'id'>>): Promise<void>
+  /** Supprime la catégorie et ses films */
+  deleteFilmCategory(id: string): Promise<void>
+  /** Jeton TMDB rangé dans les réglages (jamais dans le code), ou null */
+  getTmdbToken(): Promise<string | null>
   getSymptoms(): Promise<SymptomEntry[]>
   /** Enregistre la journée (la supprime si plus rien n'est noté). */
   saveSymptoms(entry: SymptomEntry): Promise<void>
@@ -233,6 +245,42 @@ function createSupabaseApi(): Api {
     },
     async deleteOvulation(id) {
       check(await sb.from('ovulations').delete().eq('id', id))
+    },
+    async getFilmCategories() {
+      return check(
+        await sb.from('film_categories').select('id, name, emoji, blurb, position').order('position').order('created_at'),
+      ) as FilmCategory[]
+    },
+    async getFilms() {
+      return check(
+        await sb
+          .from('films')
+          .select('id, category_id, title, original_title, year, tmdb_id, poster_path, overview, runtime, letterboxd_uri, position')
+          .order('position')
+          .order('created_at'),
+      ) as Film[]
+    },
+    async addFilm(f) {
+      return check(await sb.from('films').insert(f).select().single()) as Film
+    },
+    async updateFilm(id, patch) {
+      check(await sb.from('films').update(patch).eq('id', id))
+    },
+    async deleteFilm(id) {
+      check(await sb.from('films').delete().eq('id', id))
+    },
+    async addFilmCategory(c) {
+      return check(await sb.from('film_categories').insert(c).select('id, name, emoji, blurb, position').single()) as FilmCategory
+    },
+    async updateFilmCategory(id, patch) {
+      check(await sb.from('film_categories').update(patch).eq('id', id))
+    },
+    async deleteFilmCategory(id) {
+      check(await sb.from('film_categories').delete().eq('id', id))
+    },
+    async getTmdbToken() {
+      const row = check(await sb.from('settings').select('value').eq('key', 'tmdb_token').maybeSingle()) as { value: string } | null
+      return row?.value?.trim() || null
     },
     async getSymptoms() {
       return check(await sb.from('symptoms').select('day, items, flow, note').order('day')) as SymptomEntry[]

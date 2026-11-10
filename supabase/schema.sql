@@ -88,12 +88,38 @@ create table if not exists public.symptoms (
   updated_at timestamptz not null default now()
 );
 
+-- Ciné à deux : catégories de films et films à regarder ensemble
+create table if not exists public.film_categories (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  emoji      text not null default '🎬',
+  blurb      text not null default '',
+  position   int not null default 0,
+  created_at timestamptz not null default now()
+);
+create table if not exists public.films (
+  id             uuid primary key default gen_random_uuid(),
+  category_id    uuid not null references public.film_categories(id) on delete cascade,
+  title          text not null,
+  original_title text,
+  year           int,
+  tmdb_id        int,          -- null : pas encore cherché sur TMDB ; 0 : introuvable
+  poster_path    text,
+  overview       text,
+  runtime        int,
+  letterboxd_uri text,
+  position       int not null default 0,
+  created_at     timestamptz not null default now()
+);
+create index if not exists films_category_idx on public.films (category_id);
+-- Jeton TMDB : à insérer à la main dans settings (clé 'tmdb_token'), jamais dans le code
+
 -- Sécurité : RLS partout, accès complet uniquement pour l'utilisateur connecté
 -- (il n'existe qu'un seul compte, et les inscriptions sont désactivées).
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages','symptoms']
+  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages','symptoms','film_categories','films']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "authenticated full access" on public.%I', t);

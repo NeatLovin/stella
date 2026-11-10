@@ -1,6 +1,7 @@
 // Données fictives en mémoire pour développer sans Supabase (npm run demo, mot de passe « demo »).
 import type { Api, Photo, Reason, ReasonAuthor, TimelineEvent, WishlistItem } from './api'
 import type { Ovulation, Period } from './cycle'
+import type { Film, FilmCategory } from './films'
 import { isEmptyEntry, type SymptomEntry } from './symptoms'
 import { plusDays, todayISO } from './dates'
 
@@ -71,6 +72,38 @@ export function createDemoApi(): Api {
     { id: uid(), start_date: plusDays(today, -11), end_date: plusDays(today, -7) },
   ]
   let ovulations: Ovulation[] = []
+  // Ciné à deux : catégories et films génériques (sans affiches : pas de TMDB en démo)
+  let filmCategories: FilmCategory[] = [
+    { id: 'cat-1', name: 'Classiques', emoji: '🔥', blurb: 'Catégorie de démonstration.', position: 1 },
+    { id: 'cat-2', name: 'Noël', emoji: '🎄', blurb: 'Plaid et chocolat chaud.', position: 2 },
+    { id: 'cat-3', name: 'À découvrir', emoji: '🌠', blurb: 'Jamais vus, ni l’un ni l’autre.', position: 3 },
+  ]
+  const demoFilm = (i: number, category_id: string, title: string, year: number, runtime: number): Film => ({
+    id: `film-${i}`,
+    category_id,
+    title,
+    original_title: null,
+    year,
+    tmdb_id: 0,
+    poster_path: null,
+    overview: 'Résumé de démonstration du film, sur deux ou trois lignes pour voir la mise en page.',
+    runtime,
+    letterboxd_uri: null,
+    position: i,
+  })
+  let films: Film[] = [
+    ['cat-1', 'Film culte', 1994, 142],
+    ['cat-1', 'Grand classique', 2008, 152],
+    ['cat-1', 'Chef-d’œuvre', 1988, 124],
+    ['cat-1', 'Film à twist', 2006, 130],
+    ['cat-2', 'Comédie de Noël', 2003, 97],
+    ['cat-2', 'Film sous la neige', 1990, 103],
+    ['cat-2', 'Conte d’hiver', 2019, 96],
+    ['cat-3', 'Pépite inconnue', 2013, 123],
+    ['cat-3', 'Film d’animation', 1997, 134],
+    ['cat-3', 'Thriller', 2016, 106],
+  ].map(([c, t, y, r], i) => demoFilm(i + 1, c as string, t as string, y as number, r as number))
+
   // Quelques symptômes qui reviennent, pour montrer « Ce qui revient »
   let symptoms: SymptomEntry[] = [
     ...[-96, -95, -68, -67, -39, -11, -10].map((d) => ({ day: plusDays(today, d), items: ['crampes'], flow: null, note: null })),
@@ -200,6 +233,38 @@ export function createDemoApi(): Api {
     },
     async deleteOvulation(id) {
       ovulations = ovulations.filter((o) => o.id !== id)
+    },
+    async getFilmCategories() {
+      return [...filmCategories].sort((a, b) => a.position - b.position)
+    },
+    async getFilms() {
+      return [...films]
+    },
+    async addFilm(f) {
+      const film = { ...f, id: uid() }
+      films.push(film)
+      return film
+    },
+    async updateFilm(id, patch) {
+      films = films.map((f) => (f.id === id ? { ...f, ...patch } : f))
+    },
+    async deleteFilm(id) {
+      films = films.filter((f) => f.id !== id)
+    },
+    async addFilmCategory(c) {
+      const cat = { ...c, id: uid() }
+      filmCategories.push(cat)
+      return cat
+    },
+    async updateFilmCategory(id, patch) {
+      filmCategories = filmCategories.map((c) => (c.id === id ? { ...c, ...patch } : c))
+    },
+    async deleteFilmCategory(id) {
+      filmCategories = filmCategories.filter((c) => c.id !== id)
+      films = films.filter((f) => f.category_id !== id)
+    },
+    async getTmdbToken() {
+      return null
     },
     async getSymptoms() {
       return [...symptoms].sort((a, b) => a.day.localeCompare(b.day))

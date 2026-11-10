@@ -19,6 +19,14 @@ export const IconStar = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const IconFilm = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="3.5" y="9.5" width="17" height="10.5" rx="2" />
+    <path d="m3.4 9.4 15.9-4.3.9 3.3" />
+    <path d="m8.2 8.1 2.6 1.4M13.4 6.7l2.6 1.4" />
+  </svg>
+)
+
 export const IconConstellation = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="M5 18 9 9l6 3 4-7" strokeDasharray="0.1 0" opacity=".55" />

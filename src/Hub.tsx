@@ -12,6 +12,7 @@ import { api } from './lib/api'
 import { todayISO, type ISODate } from './lib/dates'
 import { milestoneOn } from './lib/milestones'
 import { EASE_OUT } from './lib/motion'
+import { Cine } from './pages/Cine'
 import { Cycle } from './pages/Cycle'
 import { Home } from './pages/Home'
 import { Jar } from './pages/Jar'
@@ -61,7 +62,7 @@ function MilestoneAuto({ start }: { start: ISODate }) {
   return <MilestoneCelebration milestone={m} open={open && splashGone} onClose={() => setOpen(false)} />
 }
 
-const ORDER = ['/', '/timeline', '/bocal', '/wishlist', '/cycle']
+const ORDER = ['/', '/timeline', '/bocal', '/wishlist', '/cine', '/cycle']
 
 /** Transition douce entre onglets : fondu + léger glissement dans le sens de la navigation. */
 function AnimatedRoutes() {
@@ -106,6 +107,7 @@ function AnimatedRoutes() {
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/bocal" element={<Jar />} />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/cine" element={<Cine />} />
           <Route path="/cycle" element={<Cycle />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
