@@ -72,12 +72,23 @@ export function BottomSheet({ open, onClose, label, children }: Props) {
               if (info.offset.y > 110 || info.velocity.y > 600) onClose()
             }}
           >
-            <div
-              className="-mx-6 -mt-3 mb-1 flex cursor-grab touch-none justify-center pt-3 pb-3 active:cursor-grabbing md:hidden"
-              onPointerDown={(e) => drag.start(e)}
-              aria-hidden
-            >
-              <span className="h-1.5 w-10 rounded-full bg-mist/30" />
+            {/* En-tête collant : la poignée (téléphone) et la croix restent à portée même en bas d'une longue fiche */}
+            <div className="sticky top-0 z-20 -mx-6 -mt-3 mb-1 h-11 md:-mt-6 md:h-12">
+              <div
+                className="absolute inset-0 flex cursor-grab touch-none justify-center rounded-t-[1.75rem] bg-gradient-to-b from-sky from-60% to-transparent pt-3 active:cursor-grabbing md:cursor-auto md:pt-0"
+                onPointerDown={(e) => !wide && drag.start(e)}
+                aria-hidden
+              >
+                <span className="h-1.5 w-10 rounded-full bg-mist/30 md:hidden" />
+              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Fermer"
+                className="press absolute top-1.5 right-3 flex h-9 w-9 items-center justify-center rounded-full text-2xl leading-none text-mist hover:bg-white/5 hover:text-starlight md:top-3"
+              >
+                ×
+              </button>
             </div>
             {children}
           </motion.div>

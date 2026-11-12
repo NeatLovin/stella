@@ -1,6 +1,7 @@
 import { motion } from 'motion/react'
+import type { MouseEvent } from 'react'
 import { SPRING, SPRING_POP } from '../lib/motion'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { IconConstellation, IconFilm, IconGift, IconJar, IconMoon, IconStar } from './icons'
 
 const tabs = [
@@ -14,6 +15,16 @@ const tabs = [
 
 /** Barre d'onglets flottante en verre, en bas de l'écran sur téléphone comme sur ordinateur. */
 export function TabBar() {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const reselect = (to: string) => (e: MouseEvent) => {
+    const here = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
+    if (!here) return
+    e.preventDefault()
+    window.dispatchEvent(new CustomEvent('stella:tab-reselect', { detail: to }))
+    if (location.search) navigate(to, { replace: true })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   return (
     <nav aria-label="Navigation" className="tabbar-dock pointer-events-none fixed inset-x-0 z-40 flex justify-center px-3">
       <ul className="glass pointer-events-auto flex h-[var(--tabbar-h)] w-full max-w-[29rem] items-stretch rounded-full p-1.5">
@@ -22,6 +33,7 @@ export function TabBar() {
             <NavLink
               to={to}
               end={to === '/'}
+              onClick={reselect(to)}
               className={({ isActive }) =>
                 `press relative flex h-full flex-col items-center justify-center gap-0.5 rounded-full text-[0.68rem] tracking-wide transition-colors duration-300 ${
                   isActive ? 'text-starlight' : 'text-mist/75 hover:text-starlight'

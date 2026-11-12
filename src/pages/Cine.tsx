@@ -65,11 +65,57 @@ export function Cine() {
   }, [films])
   const opened = categories.find((c) => c.id === params.get('c')) ?? null
 
+  // On retient la hauteur dans les rangées pour y revenir en sortant d'une catégorie
+  const overviewY = useRef(0)
   const openCat = (id: string | null) => {
-    if (id) setParams({ c: id })
-    else if (params.get('c')) window.history.back()
-    window.scrollTo({ top: 0 })
+    if (id) {
+      overviewY.current = window.scrollY
+      setParams({ c: id })
+    } else if (params.get('c')) window.history.back()
   }
+  const openedId = opened?.id ?? null
+  useEffect(() => {
+    if (openedId) {
+      window.scrollTo({ top: 0 })
+      return
+    }
+    // Après le petit fondu entre les deux vues
+    const y = overviewY.current
+    if (!y) return
+    const t = window.setTimeout(() => window.scrollTo({ top: y }), 280)
+    return () => window.clearTimeout(t)
+  }, [openedId])
+
+  // Retoucher l'onglet Ciné : retour aux rangées, tout en haut
+  useEffect(() => {
+    const onReselect = (e: Event) => {
+      if ((e as CustomEvent<string>).detail === '/cine') overviewY.current = 0
+    }
+    window.addEventListener('stella:tab-reselect', onReselect)
+    return () => window.removeEventListener('stella:tab-reselect', onReselect)
+  }, [])
+
+  // Ordinateur : Échap ressort de la catégorie (si aucune fiche n'est ouverte)
+  useEffect(() => {
+    if (!openedId) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !document.querySelector('[role=dialog]')) openCat(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openedId])
+
+  // Le titre de la catégorie apparaît dans la barre collante une fois sorti de l'écran
+  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleHidden, setTitleHidden] = useState(false)
+  useEffect(() => {
+    const el = titleRef.current
+    if (!el) return
+    const io = new IntersectionObserver(([e]) => setTitleHidden(!e.isIntersecting), { rootMargin: '-64px 0px 0px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [openedId])
 
   const patchFilm = (id: string, patch: Partial<Film>) =>
     setData((d) => d && { ...d, films: d.films.map((f) => (f.id === id ? { ...f, ...patch } : f)) })
@@ -138,27 +184,56 @@ export function Cine() {
               exit={{ opacity: 0, x: 32 }}
               transition={{ duration: 0.25, ease: EASE_OUT }}
             >
-              <div className="mb-4 flex items-center justify-between gap-3">
+              {/* Barre collante : le retour reste toujours à portée de pouce */}
+              <div className="sticky top-0 z-30 -mx-5 mb-4 flex items-center gap-2 bg-night/80 px-3 pt-[max(0.5rem,env(safe-area-inset-top))] pb-2 backdrop-blur-md lg:top-3 lg:-mx-4 lg:rounded-full lg:border lg:border-glow/15 lg:px-3 lg:pt-1.5 lg:pb-1.5 lg:shadow-[0_10px_30px_rgb(0_0_0/0.35)]">
                 <button
                   type="button"
                   onClick={() => openCat(null)}
-                  className="press -ml-2 flex items-center gap-1 rounded-full px-2 py-1 text-sm text-glow hover:text-starlight"
+                  aria-label="Toutes les catégories"
+                  className="press flex h-11 flex-none items-center gap-1.5 rounded-full pr-3 pl-2 text-sm text-glow hover:bg-white/5 hover:text-starlight"
                 >
-                  <span className="text-lg leading-none" aria-hidden>
+                  <span className="text-2xl leading-none" aria-hidden>
                     ‹
-                  </span>{' '}
-                  Toutes les catégories
+                  </span>
+                  <span className={titleHidden ? 'hidden sm:inline' : ''}>Toutes les catégories</span>
                 </button>
-                <button
-                  type="button"
-                  className="press -mr-2 rounded-full px-2 py-1 text-sm text-mist hover:text-starlight"
-                  onClick={() => setCatEditing({ mode: 'edit', cat: opened })}
-                >
-                  Modifier
-                </button>
+                <AnimatePresence>
+                  {titleHidden && (
+                    <motion.span
+                      className="font-display min-w-0 flex-1 truncate text-lg sm:text-center"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 6 }}
+                      transition={{ duration: 0.2 }}
+                      aria-hidden
+                    >
+                      {opened.emoji} {opened.name}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+                <span className="ml-auto flex flex-none items-center gap-1">
+                  {titleHidden && (
+                    <button
+                      type="button"
+                      onClick={() => setDrawFrom(opened.id)}
+                      disabled={!shown.length}
+                      aria-label="Tirer au sort dans cette catégorie"
+                      className="press flex h-11 w-11 items-center justify-center rounded-full text-lg hover:bg-white/5"
+                    >
+                      🎲
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="press h-11 rounded-full px-3 text-sm text-mist hover:bg-white/5 hover:text-starlight"
+                    onClick={() => setCatEditing({ mode: 'edit', cat: opened })}
+                  >
+                    Modifier
+                  </button>
+                </span>
               </div>
               <div className="mb-6">
-                <h2 className="font-display text-[2rem] leading-tight">
+                <h2 ref={titleRef} className="font-display text-[2rem] leading-tight">
                   <span aria-hidden>{opened.emoji} </span>
                   {opened.name}
                 </h2>
