@@ -66,9 +66,12 @@ export function StarrySky() {
     let warpStart = -1
     let warpDir = 0
 
-    /** Voie lactée : bande diagonale de nuages, dessinée une fois en basse résolution */
+    /**
+     * Voie lactée : bande diagonale de nuages, dessinée une fois, à la résolution de l'écran.
+     * (En basse résolution agrandie, les très faibles transparences faisaient apparaître un quadrillage.)
+     */
     const buildNebula = () => {
-      const scale = 0.35
+      const scale = dpr
       const c = document.createElement('canvas')
       c.width = Math.max(1, Math.round(w * 1.3 * scale))
       c.height = Math.max(1, Math.round(h * 1.3 * scale))
@@ -76,7 +79,7 @@ export function StarrySky() {
       const cw = c.width
       const ch = c.height
       // Bande du coin haut-droit vers le bas-gauche
-      const blobs = Math.round(26 + (cw * ch) / 9000)
+      const blobs = Math.round(26 + (((cw * ch) / (scale * scale)) * 0.1225) / 9000)
       for (let i = 0; i < blobs; i++) {
         const t = Math.random()
         const x = cw * (0.95 - t * 0.9) + (Math.random() - 0.5) * cw * 0.22
@@ -91,13 +94,16 @@ export function StarrySky() {
         n.fillStyle = g
         n.fillRect(x - r, y - r, r * 2, r * 2)
       }
-      // Poussière d'étoiles très fine dans la bande
-      for (let i = 0; i < cw * 1.2; i++) {
+      // Poussière d'étoiles très fine dans la bande (petits points ronds, pas de carrés)
+      const dust = Math.round((cw * ch) / (2600 * scale * scale))
+      for (let i = 0; i < dust; i++) {
         const t = Math.random()
         const x = cw * (0.95 - t * 0.9) + (Math.random() - 0.5) * cw * 0.16
         const y = ch * (0.05 + t * 0.9) + (Math.random() - 0.5) * ch * 0.12
-        n.fillStyle = `rgba(220,230,255,${0.1 + Math.random() * 0.25})`
-        n.fillRect(x, y, 0.6, 0.6)
+        n.fillStyle = `rgba(220,230,255,${0.12 + Math.random() * 0.28})`
+        n.beginPath()
+        n.arc(x, y, 0.35 * scale, 0, Math.PI * 2)
+        n.fill()
       }
       nebula = c
     }
