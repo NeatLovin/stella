@@ -5,6 +5,7 @@ import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
 import { AdventCard } from '../components/Advent'
+import { BackupButton } from '../components/Backup'
 import { BinaryStar } from '../components/BinaryStar'
 import { Games } from '../components/Games'
 import { LilyEgg } from '../components/LilyEgg'
@@ -157,6 +158,10 @@ export function Home() {
 
           <motion.div variants={rise} className="flex flex-col">
             <Games />
+          </motion.div>
+
+          <motion.div variants={rise} className="flex flex-col">
+            <BackupButton />
           </motion.div>
         </motion.div>
 

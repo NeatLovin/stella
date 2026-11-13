@@ -303,6 +303,16 @@ export function createDemoApi(): Api {
     async deleteOvulation(id) {
       ovulations = ovulations.filter((o) => o.id !== id)
     },
+    async exportTables(tables) {
+      const data: Record<string, unknown[]> = { reasons, timeline_events: timeline, films, film_categories: filmCategories }
+      return { data, missing: tables.filter((t) => !(t in data)) }
+    },
+    async listFiles() {
+      return []
+    },
+    async downloadFile() {
+      return new Blob()
+    },
     async getAdventDays(year) {
       // Comme Supabase : seulement les cases dont la date est passée
       const today = new Date().toISOString().slice(0, 10)

@@ -100,6 +100,11 @@ export interface Api {
   getAdventDays(year: number): Promise<AdventDay[]>
   getAdventState(year: number): Promise<AdventState[]>
   setAdventState(date: string, patch: Partial<Omit<AdventState, 'date'>>): Promise<void>
+  /** Sauvegarde : toutes les lignes de chaque table (les tables absentes sont ignorées) */
+  exportTables(tables: readonly string[]): Promise<{ data: Record<string, unknown[]>; missing: string[] }>
+  /** Sauvegarde : chemins de tous les fichiers du stockage privé */
+  listFiles(): Promise<string[]>
+  downloadFile(path: string): Promise<Blob>
   getFilmCategories(): Promise<FilmCategory[]>
   getFilms(): Promise<Film[]>
   addFilm(f: FilmInput): Promise<Film>
@@ -268,6 +273,51 @@ function createSupabaseApi(): Api {
     },
     async setAdventState(date, patch) {
       check(await sb.from('advent_state').upsert({ date, ...patch }))
+    },
+    async exportTables(tables) {
+      const data: Record<string, unknown[]> = {}
+      const missing: string[] = []
+      for (const t of tables) {
+        const rows: unknown[] = []
+        // Par pages de 1000 lignes (limite de Supabase)
+        for (let from = 0; ; from += 1000) {
+          const { data: page, error } = await sb
+            .from(t)
+            .select('*')
+            .range(from, from + 999)
+          if (error) {
+            missing.push(t)
+            break
+          }
+          rows.push(...(page ?? []))
+          if (!page || page.length < 1000) {
+            data[t] = rows
+            break
+          }
+        }
+      }
+      return { data, missing }
+    },
+    async listFiles() {
+      const out: string[] = []
+      const walk = async (prefix: string) => {
+        for (let offset = 0; ; offset += 1000) {
+          const entries =
+            check(await sb.storage.from(BUCKET).list(prefix, { limit: 1000, offset, sortBy: { column: 'name', order: 'asc' } })) ?? []
+          for (const e of entries) {
+            const path = prefix ? `${prefix}/${e.name}` : e.name
+            // Les dossiers n'ont pas d'identifiant
+            if (e.id) out.push(path)
+            else await walk(path)
+          }
+          if (entries.length < 1000) break
+        }
+      }
+      await walk('')
+      return out.filter((p) => !p.endsWith('.emptyFolderPlaceholder'))
+    },
+    async downloadFile(path) {
+      return check(await sb.storage.from(BUCKET).download(path)) as Blob
     },
     async getFilmCategories() {
       return check(
