@@ -78,6 +78,7 @@ export function Timeline() {
   return (
     <Page
       wide
+      eyebrow="Notre histoire"
       title="Notre constellation"
       intro={`Chaque étoile est un moment à nous. ${desktop ? 'Clique-en une pour la revoir, puis voyage de l’une à l’autre avec ← →.' : 'Touche-en une pour la revoir, puis glisse pour passer à la suivante.'}`}
     >

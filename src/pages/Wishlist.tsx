@@ -63,7 +63,7 @@ export function Wishlist() {
   }
 
   return (
-    <Page wide title="Wishlist" intro="Tout ce qui te fait envie, au même endroit.">
+    <Page wide eyebrow="Tes envies" title="Wishlist" intro="Tout ce qui te fait envie, au même endroit.">
       <button type="button" className="btn-primary mb-8" onClick={() => setEditing({ mode: 'new' })}>
         <IconPlus width={20} height={20} />
         Ajouter une envie

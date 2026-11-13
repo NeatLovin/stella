@@ -6,16 +6,52 @@ import { rise, stagger } from '../lib/motion'
  * Gabarit de page. Sur téléphone : colonne étroite.
  * Sur ordinateur (≥ 1024 px) : `wide` élargit la page pour les mises en page en colonnes.
  */
-export function Page({ title, intro, wide, children }: { title?: string; intro?: string; wide?: boolean; children: ReactNode }) {
+export function Page({
+  title,
+  eyebrow,
+  intro,
+  wide,
+  children,
+}: {
+  title?: string
+  /** Petit surtitre en capitales espacées au-dessus du titre */
+  eyebrow?: string
+  intro?: string
+  wide?: boolean
+  children: ReactNode
+}) {
+  // Titre éditorial : le premier mot droit, la suite en italique lumineuse (« Notre *constellation* »)
+  const [head, ...rest] = (title ?? '').split(' ')
+  const accent = rest.join(' ')
   return (
     <main className={`safe-top safe-bottom mx-auto w-full max-w-xl px-5 ${wide ? 'lg:max-w-6xl lg:px-10 2xl:max-w-7xl' : ''}`}>
       {title && (
-        <motion.header className="mb-8 pt-4 lg:mb-12" variants={stagger(0.08, 0.05)} initial="hidden" animate="show">
-          <motion.h1 variants={rise} className="font-display text-[clamp(2.4rem,10vw,3.25rem)] leading-none font-medium tracking-tight">
-            {title}
+        <motion.header className="mb-9 pt-4 lg:mb-14" variants={stagger(0.08, 0.05)} initial="hidden" animate="show">
+          {eyebrow && (
+            <motion.p
+              variants={rise}
+              className="mb-3 flex items-center gap-2.5 text-[0.68rem] font-medium tracking-[0.42em] text-gold/90 uppercase"
+            >
+              <span aria-hidden className="text-[0.8rem] tracking-normal">
+                ✦
+              </span>
+              {eyebrow}
+            </motion.p>
+          )}
+          <motion.h1
+            variants={rise}
+            className="font-display text-[clamp(3rem,13.5vw,4.4rem)] leading-[0.92] font-medium tracking-[-0.02em] lg:text-[clamp(4.6rem,6.4vw,6.6rem)]"
+          >
+            {head}
+            {accent && (
+              <>
+                {' '}
+                <span className="title-accent italic">{accent}</span>
+              </>
+            )}
           </motion.h1>
           {intro && (
-            <motion.p variants={rise} className="mt-3 max-w-[36ch] text-mist">
+            <motion.p variants={rise} className="mt-4 max-w-[38ch] text-mist lg:mt-5 lg:text-lg">
               {intro}
             </motion.p>
           )}

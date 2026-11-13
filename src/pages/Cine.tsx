@@ -168,7 +168,7 @@ export function Cine() {
   const shown = opened ? (byCat.get(opened.id) ?? []) : []
 
   return (
-    <Page title="Ciné à deux" intro="Nos films à regarder ensemble, rangés par envie." wide>
+    <Page eyebrow="Nos soirées" title="Ciné à deux" intro="Nos films à regarder ensemble, rangés par envie." wide>
       {loading && !data ? (
         <Skeleton variant="cards" />
       ) : error && !data ? (

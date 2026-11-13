@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
+import { BinaryStar } from '../components/BinaryStar'
 import { Games } from '../components/Games'
 import { LilyEgg } from '../components/LilyEgg'
 import { MilestoneCelebration } from '../components/MilestoneCelebration'
@@ -89,8 +90,10 @@ export function Home() {
           <motion.div variants={rise} className="mt-10 flex items-stretch gap-3">
             <div
               aria-label="Temps passé ensemble"
-              className="grid shrink-0 grid-cols-[auto_auto] content-start items-baseline gap-x-4 gap-y-1"
+              className="relative isolate grid shrink-0 grid-cols-[auto_auto] content-start items-baseline gap-x-4 gap-y-1"
             >
+              {/* L'étoile binaire : nos deux étoiles en orbite autour du compteur */}
+              <BinaryStar className="absolute -inset-x-7 -inset-y-8 -z-10 h-[calc(100%+4rem)] w-[calc(100%+3.5rem)] lg:-inset-x-12 lg:-inset-y-10 lg:h-[calc(100%+5rem)] lg:w-[calc(100%+6rem)]" />
               {rows.map(({ n, unit, live }, i) => (
                 <div key={i} className="contents">
                   <span

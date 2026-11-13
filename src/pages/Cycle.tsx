@@ -53,7 +53,7 @@ export function Cycle() {
   const today = todayISO()
 
   return (
-    <Page wide title="Cycle">
+    <Page wide eyebrow="Prendre soin de toi" title="Cycle">
       {loading && <Skeleton variant="cycle" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && <CycleContent periods={data.periods} ovulations={data.ovulations} today={today} reload={reload} />}

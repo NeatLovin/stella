@@ -78,6 +78,11 @@ function AnimatedRoutes() {
   }
   const shift = reduced ? 0 : 24
 
+  // Le ciel « voyage » dans le sens de la navigation
+  useEffect(() => {
+    if (dir) window.dispatchEvent(new CustomEvent('stella:warp', { detail: dir }))
+  }, [location.pathname, dir])
+
   return (
     <AnimatePresence mode="wait" initial={false} custom={dir}>
       <motion.div

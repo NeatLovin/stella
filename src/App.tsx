@@ -7,6 +7,7 @@ import { Splash } from './components/Splash'
 import { Loading } from './components/Page'
 import { StarrySky } from './components/StarrySky'
 import { AppReadyContext, SplashGoneContext } from './context'
+import { useGlassLight } from './hooks/useGlassLight'
 import { api, configError } from './lib/api'
 import { forgetTrusted, isTrusted, markTrusted } from './lib/offline'
 import { Login } from './pages/Login'
@@ -34,6 +35,7 @@ const SPLASH_MAX = 7000
 export default function App() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null)
   const reduced = useReducedMotion()
+  useGlassLight()
   const [minDone, setMinDone] = useState(false)
   const [maxDone, setMaxDone] = useState(false)
   const [hubReady, setHubReady] = useState(false)
