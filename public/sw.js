@@ -32,7 +32,11 @@ self.addEventListener('message', (event) => {
   )
 })
 
-const isPhoto = (url) => url.pathname.includes('/storage/v1/object/')
+// Seules les images affichées par la page (balises <img>, liens signés) passent par ici.
+// Les téléchargements authentifiés (sauvegarde), les sons (requêtes « Range ») et le reste
+// vont directement au réseau : les re-demander sans leurs en-têtes les ferait échouer.
+const isPhoto = (req, url) =>
+  req.destination === 'image' && url.pathname.includes('/storage/v1/object/sign/') && !req.headers.has('range')
 const photoKey = (url) => url.origin + url.pathname
 
 self.addEventListener('fetch', (event) => {
@@ -43,7 +47,7 @@ self.addEventListener('fetch', (event) => {
   // Photos : cache d'abord (les fichiers ne changent jamais pour un même chemin).
   // Demandées en CORS pour pouvoir lire le statut : seules les vraies photos (200) sont gardées,
   // jamais une erreur de lien expiré.
-  if (isPhoto(url)) {
+  if (isPhoto(req, url)) {
     event.respondWith(
       caches.open(PHOTO_CACHE).then(async (c) => {
         const hit = await c.match(photoKey(url))
