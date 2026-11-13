@@ -4,6 +4,7 @@ import { HashRouter, Navigate, Route, Routes, useLocation } from 'react-router-d
 import { MilestoneCelebration, milestoneSeen } from './components/MilestoneCelebration'
 import { Loading } from './components/Page'
 import { BackToTop } from './components/BackToTop'
+import { Snow } from './components/Snow'
 import { TabBar } from './components/TabBar'
 import { WaterReminder } from './components/WaterReminder'
 import { clearWelcomeFlag, hasWelcomeFlag, Welcome } from './components/Welcome'
@@ -44,6 +45,7 @@ export default function Hub() {
     <SettingsContext.Provider value={settings}>
       <WelcomeContext.Provider value={() => setWelcome(true)}>
         <HashRouter>
+          <Snow />
           <BackToTop />
           <TabBar />
           <WaterReminder sponsor={settings.his_name} />

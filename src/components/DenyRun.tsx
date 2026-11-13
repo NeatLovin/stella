@@ -1,3 +1,4 @@
+import { setDenyFestive } from '../lib/deny'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -22,7 +23,14 @@ function writeBest(n: number) {
 }
 
 /** Mini-jeu plein écran : Deny court, on touche l'écran (ou Espace) pour sauter. */
-export function DenyRun({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function DenyRun({ open, onClose, festive = false }: { open: boolean; onClose: () => void; festive?: boolean }) {
+  // Version Noël, le temps de la partie
+  useEffect(() => {
+    if (!open) return
+    setDenyFestive(festive)
+    return () => setDenyFestive(false)
+  }, [open, festive])
+
   const root = useRef<HTMLDivElement>(null)
   useDialog(open, root, onClose)
 

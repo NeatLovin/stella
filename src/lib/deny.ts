@@ -23,6 +23,47 @@ export const FUR = {
 
 export type Pose = 'stand' | 'run' | 'jump' | 'hurt'
 
+/** Version Noël (calendrier de l'Avent) : bonnet rouge, et neige dans le jeu */
+let festive = false
+export const setDenyFestive = (on: boolean) => {
+  festive = on
+}
+export const isDenyFestive = () => festive
+
+/** Bonnet de Noël posé sur la tête, la pointe retombe vers l'arrière */
+function santaHat(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = '#d6283f'
+  ctx.beginPath()
+  ctx.moveTo(48, 24)
+  ctx.bezierCurveTo(52, 8, 70, 2, 82, 15)
+  ctx.bezierCurveTo(72, 12, 56, 10, 40, 14)
+  ctx.bezierCurveTo(36, 15, 33, 19, 31, 23)
+  ctx.bezierCurveTo(38, 19, 44, 21, 48, 24)
+  ctx.closePath()
+  ctx.fill()
+  // Ombre dans le pli
+  ctx.fillStyle = 'rgba(0,0,0,.18)'
+  ctx.beginPath()
+  ctx.moveTo(40, 14)
+  ctx.bezierCurveTo(48, 12, 60, 11, 70, 12)
+  ctx.bezierCurveTo(58, 14, 48, 16, 42, 18)
+  ctx.closePath()
+  ctx.fill()
+  // Bordure blanche
+  ctx.strokeStyle = '#f7f3ee'
+  ctx.lineWidth = 6
+  ctx.lineCap = 'round'
+  ctx.beginPath()
+  ctx.moveTo(48, 23)
+  ctx.quadraticCurveTo(64, 13, 83, 17)
+  ctx.stroke()
+  // Pompon
+  ctx.fillStyle = '#f7f3ee'
+  ctx.beginPath()
+  ctx.arc(31, 24, 4.6, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 let paths: Record<keyof typeof DENY, Path2D> | null = null
 const getPaths = () =>
   (paths ??= Object.fromEntries(Object.entries(DENY).map(([k, d]) => [k, new Path2D(d)])) as Record<keyof typeof DENY, Path2D>)
@@ -141,5 +182,6 @@ export function drawDeny(ctx: CanvasRenderingContext2D, pose: Pose, phase: numbe
     ctx.arc(72.5, 28, 1.8, 0, Math.PI * 2)
     ctx.fill()
   }
+  if (festive) santaHat(ctx)
   ctx.restore()
 }

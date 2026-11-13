@@ -2,6 +2,7 @@ import { motion } from 'motion/react'
 import type { MouseEvent } from 'react'
 import { SPRING, SPRING_POP } from '../lib/motion'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { useAdventBadge } from './Advent'
 import { IconConstellation, IconFilm, IconGift, IconJar, IconMoon, IconStar } from './icons'
 
 const tabs = [
@@ -17,6 +18,7 @@ const tabs = [
 export function TabBar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const adventBadge = useAdventBadge()
   const reselect = (to: string) => (e: MouseEvent) => {
     const here = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to)
     if (!here) return
@@ -58,6 +60,12 @@ export function TabBar() {
                     <Icon width={22} height={22} className={isActive ? 'text-glow drop-shadow-[0_0_8px_rgb(125_162_255/0.9)]' : ''} />
                   </motion.span>
                   <span className="relative">{label}</span>
+                  {to === '/' && adventBadge && (
+                    <span
+                      aria-label="Une étoile du calendrier t’attend"
+                      className="absolute top-2 right-[calc(50%-1.1rem)] h-2 w-2 rounded-full bg-gold shadow-[0_0_8px_#ffd98a]"
+                    />
+                  )}
                 </>
               )}
             </NavLink>

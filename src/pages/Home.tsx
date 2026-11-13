@@ -4,12 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSettings, useShowWelcome } from '../context'
 import { Page } from '../components/Page'
 import { PhotoWall } from '../components/PhotoWall'
+import { AdventCard } from '../components/Advent'
 import { BinaryStar } from '../components/BinaryStar'
 import { Games } from '../components/Games'
 import { LilyEgg } from '../components/LilyEgg'
 import { MilestoneCelebration } from '../components/MilestoneCelebration'
 import { DESKTOP, useMediaQuery } from '../hooks/useMediaQuery'
-import { formatLong, parse, toISO } from '../lib/dates'
+import { formatLong, parse, toISO, todayISO } from '../lib/dates'
+import { isDecember } from '../lib/advent'
 import { milestoneOn, nextMilestone } from '../lib/milestones'
 import { EASE_OUT, rise, stagger } from '../lib/motion'
 
@@ -145,6 +147,12 @@ export function Home() {
             >
               Relire mon mot
             </motion.button>
+          )}
+
+          {isDecember(todayISO()) && (
+            <motion.div variants={rise} className="flex flex-col">
+              <AdventCard />
+            </motion.div>
           )}
 
           <motion.div variants={rise} className="flex flex-col">

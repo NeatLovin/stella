@@ -1,5 +1,6 @@
 import { createClient, type Session } from '@supabase/supabase-js'
 import type { Ovulation, Period } from './cycle'
+import type { AdventDay, AdventState } from './advent'
 import type { Film, FilmCategory, FilmInput } from './films'
 import { isEmptyEntry, type SymptomEntry } from './symptoms'
 import type { ISODate } from './dates'
@@ -95,6 +96,10 @@ export interface Api {
   getOvulations(): Promise<Ovulation[]>
   addOvulation(date: ISODate): Promise<void>
   deleteOvulation(id: string): Promise<void>
+  /** Cases déjà ouvertes à la date du jour (Supabase ne renvoie jamais les suivantes) */
+  getAdventDays(year: number): Promise<AdventDay[]>
+  getAdventState(year: number): Promise<AdventState[]>
+  setAdventState(date: string, patch: Partial<Omit<AdventState, 'date'>>): Promise<void>
   getFilmCategories(): Promise<FilmCategory[]>
   getFilms(): Promise<Film[]>
   addFilm(f: FilmInput): Promise<Film>
@@ -245,6 +250,24 @@ function createSupabaseApi(): Api {
     },
     async deleteOvulation(id) {
       check(await sb.from('ovulations').delete().eq('id', id))
+    },
+    async getAdventDays(year) {
+      return check(
+        await sb
+          .from('advent_days')
+          .select('date, kind, title, body, extra')
+          .gte('date', `${year}-12-01`)
+          .lte('date', `${year}-12-24`)
+          .order('date'),
+      ) as AdventDay[]
+    },
+    async getAdventState(year) {
+      return check(
+        await sb.from('advent_state').select('date, opened_at, used_at, answer').gte('date', `${year}-12-01`).lte('date', `${year}-12-31`),
+      ) as AdventState[]
+    },
+    async setAdventState(date, patch) {
+      check(await sb.from('advent_state').upsert({ date, ...patch }))
     },
     async getFilmCategories() {
       return check(

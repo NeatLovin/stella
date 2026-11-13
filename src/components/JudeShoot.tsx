@@ -1,3 +1,4 @@
+import { setJudeFestive } from '../lib/jude'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { createPortal } from 'react-dom'
@@ -50,7 +51,14 @@ export function JudeThumb({ className = '' }: { className?: string }) {
 }
 
 /** Stand de tir plein écran sur Jude. */
-export function JudeShoot({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function JudeShoot({ open, onClose, festive = false }: { open: boolean; onClose: () => void; festive?: boolean }) {
+  // Version Noël, le temps de la partie
+  useEffect(() => {
+    if (!open) return
+    setJudeFestive(festive)
+    return () => setJudeFestive(false)
+  }, [open, festive])
+
   const root = useRef<HTMLDivElement>(null)
   useDialog(open, root, onClose)
 

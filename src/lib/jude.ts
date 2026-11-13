@@ -71,6 +71,48 @@ const ellipse = (cx: number, cy: number, rx: number, ry: number, rot = 0) => {
 }
 
 let shapes: ReturnType<typeof buildShapes> | null = null
+/** Version Noël (calendrier de l'Avent) : Jude en renne, avec ses bois et son nez rouge */
+let festive = false
+export const setJudeFestive = (on: boolean) => {
+  festive = on
+}
+
+function antlers(ctx: CanvasRenderingContext2D) {
+  ctx.strokeStyle = '#7a4f2a'
+  ctx.lineWidth = 6
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  for (const side of [-1, 1]) {
+    const bx = 100 + side * 20
+    ctx.beginPath()
+    ctx.moveTo(bx, 38)
+    ctx.quadraticCurveTo(bx + side * 6, 18, bx + side * 22, 2)
+    ctx.moveTo(bx + side * 5, 22)
+    ctx.lineTo(bx + side * -6, 6)
+    ctx.moveTo(bx + side * 13, 12)
+    ctx.lineTo(bx + side * 28, 14)
+    ctx.stroke()
+  }
+}
+
+function rudolphNose(ctx: CanvasRenderingContext2D) {
+  const glow = ctx.createRadialGradient(100, 86, 2, 100, 86, 20)
+  glow.addColorStop(0, 'rgba(255,70,90,.55)')
+  glow.addColorStop(1, 'rgba(255,70,90,0)')
+  ctx.fillStyle = glow
+  ctx.beginPath()
+  ctx.arc(100, 86, 20, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = '#e1263f'
+  ctx.beginPath()
+  ctx.arc(100, 86, 8.5, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.fillStyle = 'rgba(255,255,255,.7)'
+  ctx.beginPath()
+  ctx.arc(97, 83, 2.4, 0, Math.PI * 2)
+  ctx.fill()
+}
+
 function buildShapes() {
   const body = new Path2D()
   body.addPath(ellipse(100, 172, 50, 54))
@@ -329,6 +371,7 @@ function drawPart(ctx: CanvasRenderingContext2D, part: PartId, damage: number) {
     return
   }
   // Tête
+  if (festive) antlers(ctx)
   ctx.fillStyle = C.fur
   ctx.fill(s.head)
   ctx.fillStyle = C.furLight
@@ -377,6 +420,7 @@ function drawPart(ctx: CanvasRenderingContext2D, part: PartId, damage: number) {
     ctx.fill()
     eye(121, 108)
   } else eye(118, 68)
+  if (festive) rudolphNose(ctx)
 }
 
 /** Rembourrage qui sort là où un morceau a été arraché. */

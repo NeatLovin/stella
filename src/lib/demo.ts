@@ -1,6 +1,7 @@
 // Données fictives en mémoire pour développer sans Supabase (npm run demo, mot de passe « demo »).
 import type { Api, Photo, Reason, ReasonAuthor, TimelineEvent, WishlistItem } from './api'
 import type { Ovulation, Period } from './cycle'
+import type { AdventDay, AdventKind, AdventState } from './advent'
 import type { Film, FilmCategory } from './films'
 import { isEmptyEntry, type SymptomEntry } from './symptoms'
 import { plusDays, todayISO } from './dates'
@@ -72,6 +73,65 @@ export function createDemoApi(): Api {
     { id: uid(), start_date: plusDays(today, -11), end_date: plusDays(today, -7) },
   ]
   let ovulations: Ovulation[] = []
+  // Calendrier de l'Avent : 24 cases génériques, une de chaque type au moins
+  const adventKinds: AdventKind[] = [
+    'mot',
+    'son',
+    'bon',
+    'souvenir',
+    'film',
+    'defi',
+    'mot',
+    'jeu',
+    'souvenir',
+    'bon',
+    'defi',
+    'rdv',
+    'bon',
+    'mot',
+    'quiz',
+    'son',
+    'souvenir',
+    'bon',
+    'rdv',
+    'film',
+    'voeu',
+    'jeu',
+    'mot',
+    'lettre',
+  ]
+  const adventDays = (year: number): AdventDay[] =>
+    adventKinds.map((kind, i) => ({
+      date: `${year}-12-${String(i + 1).padStart(2, '0')}`,
+      kind,
+      title: `Case de démonstration n° ${i + 1}`,
+      body: 'Texte de démonstration. Ici, un petit mot écrit pour l’occasion.\n\nUn deuxième paragraphe pour voir la mise en page.',
+      extra:
+        kind === 'bon'
+          ? { coupon: 'un câlin de démonstration' }
+          : kind === 'rdv'
+            ? {
+                time: '19 h 30',
+                outfit: 'Chaud et confortable',
+                clues: ['Premier indice de démonstration', 'Deuxième indice', 'Dernier indice'],
+              }
+            : kind === 'quiz'
+              ? {
+                  questions: [
+                    { q: 'Question de démonstration ?', options: ['Réponse A', 'Réponse B', 'Réponse C'], answer: 1, comment: 'Bravo !' },
+                    { q: 'Deuxième question ?', options: ['Oui', 'Non'], answer: 0 },
+                  ],
+                }
+              : kind === 'jeu'
+                ? { game: i < 10 ? 'deny' : 'jude' }
+                : kind === 'film'
+                  ? { film: 'Comédie de Noël' }
+                  : kind === 'son'
+                    ? { track: 'Morceau de démonstration' }
+                    : {},
+    }))
+  let adventState: AdventState[] = []
+
   // Ciné à deux : catégories et films génériques (sans affiches : pas de TMDB en démo)
   let filmCategories: FilmCategory[] = [
     { id: 'cat-1', name: 'Classiques', emoji: '🔥', blurb: 'Catégorie de démonstration.', position: 1 },
@@ -242,6 +302,18 @@ export function createDemoApi(): Api {
     },
     async deleteOvulation(id) {
       ovulations = ovulations.filter((o) => o.id !== id)
+    },
+    async getAdventDays(year) {
+      // Comme Supabase : seulement les cases dont la date est passée
+      const today = new Date().toISOString().slice(0, 10)
+      return adventDays(year).filter((d) => d.date <= today)
+    },
+    async getAdventState() {
+      return [...adventState]
+    },
+    async setAdventState(date, patch) {
+      const cur = adventState.find((s) => s.date === date) ?? { date, opened_at: null, used_at: null, answer: null }
+      adventState = [...adventState.filter((s) => s.date !== date), { ...cur, ...patch }]
     },
     async getFilmCategories() {
       return [...filmCategories].sort((a, b) => a.position - b.position)

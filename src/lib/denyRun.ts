@@ -1,4 +1,4 @@
-import { drawDeny, type Pose } from './deny'
+import { drawDeny, isDenyFestive, type Pose } from './deny'
 
 // Deny Run : course infinie dans le désert, la nuit. Un seul geste : sauter.
 // Tout est calculé dans un repère de hauteur fixe (H), quel que soit l'écran.
@@ -207,6 +207,11 @@ export function createGame(canvas: HTMLCanvasElement, onStatus: (status: Status,
     // Sol + petits cailloux qui défilent
     ctx.fillStyle = '#0c1440'
     ctx.fillRect(0, GROUND, W, H - GROUND)
+    if (isDenyFestive()) {
+      // Sol enneigé
+      ctx.fillStyle = 'rgba(232,240,255,.85)'
+      ctx.fillRect(0, GROUND - 2, W, 4)
+    }
     ctx.fillStyle = 'rgba(125,162,255,.5)'
     ctx.fillRect(0, GROUND, W, 1.5)
     ctx.fillStyle = 'rgba(169,179,224,.35)'
@@ -234,6 +239,21 @@ export function createGame(canvas: HTMLCanvasElement, onStatus: (status: Status,
     ctx.translate(-64, -150)
     drawDeny(ctx, pose, phase, blink)
     ctx.restore()
+
+    // Version Noël : flocons qui tombent en biais, plus vite quand Deny court
+    if (isDenyFestive()) {
+      for (let i = 0; i < 70; i++) {
+        const fall = 28 + hash(i + 3) * 40
+        const fx = (((hash(i) * 1600 - distance * (0.2 + hash(i + 7) * 0.5) + Math.sin(clock + i) * 12) % W) + W) % W
+        const fy = (hash(i + 1) * H + clock * fall) % H
+        ctx.globalAlpha = 0.45 + hash(i + 2) * 0.5
+        ctx.fillStyle = '#f4f6ff'
+        ctx.beginPath()
+        ctx.arc(fx, fy, 0.8 + hash(i + 4) * 1.8, 0, Math.PI * 2)
+        ctx.fill()
+      }
+      ctx.globalAlpha = 1
+    }
 
     // Score
     ctx.font = '500 15px Jost, system-ui, sans-serif'

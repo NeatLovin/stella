@@ -114,12 +114,28 @@ create table if not exists public.films (
 create index if not exists films_category_idx on public.films (category_id);
 -- Jeton TMDB : à insérer à la main dans settings (clé 'tmdb_token'), jamais dans le code
 
+-- Calendrier de l'Avent : une case par jour (contenu écrit à la main dans le SQL Editor)
+create table if not exists public.advent_days (
+  date  date primary key,
+  kind  text not null check (kind in ('mot','lettre','bon','souvenir','son','film','defi','quiz','jeu','rdv','voeu')),
+  title text not null,
+  body  text not null default '',
+  extra jsonb not null default '{}'
+);
+-- Ce qu'elle en a fait : ouverte, bon utilisé / défi relevé, vœu écrit
+create table if not exists public.advent_state (
+  date      date primary key,
+  opened_at timestamptz,
+  used_at   timestamptz,
+  answer    text
+);
+
 -- Sécurité : RLS partout, accès complet uniquement pour l'utilisateur connecté
 -- (il n'existe qu'un seul compte, et les inscriptions sont désactivées).
 do $$
 declare t text;
 begin
-  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages','symptoms','film_categories','films']
+  foreach t in array array['settings','timeline_events','reasons','wishlist_items','periods','ovulations','photos','milestone_messages','symptoms','film_categories','films','advent_state']
   loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "authenticated full access" on public.%I', t);
@@ -129,6 +145,16 @@ begin
     execute format('grant select, insert, update, delete on public.%I to authenticated', t);
   end loop;
 end $$;
+
+-- Cases de l'Avent : lisibles seulement à partir de leur jour (heure suisse), jamais avant,
+-- même en fouillant. Pas d'écriture depuis le site : le contenu s'écrit dans le SQL Editor.
+alter table public.advent_days enable row level security;
+drop policy if exists "advent days unlocked" on public.advent_days;
+create policy "advent days unlocked" on public.advent_days
+  for select to authenticated
+  using (date <= (now() at time zone 'Europe/Zurich')::date);
+revoke all on public.advent_days from anon;
+grant select on public.advent_days to authenticated;
 
 -- Photos de la wishlist : bucket privé (URLs signées côté app)
 insert into storage.buckets (id, name, public)
