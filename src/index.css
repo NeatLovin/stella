@@ -269,19 +269,6 @@ select {
   }
 }
 
-/* Grain très léger sur le ciel (au-dessus du canvas, sous le contenu) */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -9;
-  pointer-events: none;
-  /* Pas de mix-blend-mode : sur un ciel animé, il force un recalcul plein écran à chaque image */
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 -0.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 160px 160px;
-}
-
 /* Silhouettes de chargement : reflet qui traverse lentement */
 .shimmer {
   background: linear-gradient(100deg, rgb(125 162 255 / 0.07) 30%, rgb(170 195 255 / 0.18) 50%, rgb(125 162 255 / 0.07) 70%);
