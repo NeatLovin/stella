@@ -45,10 +45,24 @@ export function BinaryStar({ className = '' }: { className?: string }) {
       draw(performance.now())
     }
 
+    // Rayons de l'ellipse, réduits pour que l'orbite inclinée tienne entièrement dans le cadre
+    const PAD = 18
+    const radii = () => {
+      const rx0 = w / 2 - PAD
+      const ry0 = (h / 2 - PAD) * 0.92
+      const c = Math.cos(TILT)
+      const s = Math.sin(TILT)
+      const ex = Math.hypot(rx0 * c, ry0 * s) // demi-largeur de l'ellipse une fois inclinée
+      const ey = Math.hypot(rx0 * s, ry0 * c) // demi-hauteur
+      const k = Math.min(1, (w / 2 - PAD) / ex, (h / 2 - PAD) / ey)
+      return { rx0: rx0 * k, ry0: ry0 * k }
+    }
+
     // Point sur l'ellipse inclinée ; z > 0 : devant
     const at = (angle: number, k: number) => {
-      const rx = (w / 2 - 14) * k
-      const ry = (h / 2 - 14) * k * 0.92
+      const { rx0, ry0 } = radii()
+      const rx = rx0 * k
+      const ry = ry0 * k
       const ex = Math.cos(angle) * rx
       const ey = Math.sin(angle) * ry
       return {

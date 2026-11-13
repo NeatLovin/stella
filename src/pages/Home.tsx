@@ -93,7 +93,7 @@ export function Home() {
               className="relative isolate grid shrink-0 grid-cols-[auto_auto] content-start items-baseline gap-x-4 gap-y-1"
             >
               {/* L'étoile binaire : nos deux étoiles en orbite autour du compteur */}
-              <BinaryStar className="absolute -inset-x-7 -inset-y-8 -z-10 h-[calc(100%+4rem)] w-[calc(100%+3.5rem)] lg:-inset-x-12 lg:-inset-y-10 lg:h-[calc(100%+5rem)] lg:w-[calc(100%+6rem)]" />
+              <BinaryStar className="absolute -top-8 -left-4 -z-10 h-[calc(100%+4rem)] w-[calc(100%+3rem)] lg:-inset-x-12 lg:-inset-y-10 lg:h-[calc(100%+5rem)] lg:w-[calc(100%+6rem)]" />
               {rows.map(({ n, unit, live }, i) => (
                 <div key={i} className="contents">
                   <span
