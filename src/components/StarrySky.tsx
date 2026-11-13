@@ -3,7 +3,6 @@ import { useEffect, useRef } from 'react'
 // Ciel de nuit en fond fixe, en profondeur :
 // - trois couches d'étoiles (lointaines, moyennes, proches) qui glissent à des vitesses différentes
 //   quand on défile la page ou qu'on bouge la souris ;
-// - une Voie lactée en nuages très doux qui dérive lentement ;
 // - un « voyage » entre les onglets : les étoiles filent un instant dans le sens du déplacement ;
 // - de temps en temps, une étoile filante.
 // Statique si l'appareil demande de réduire les animations.
@@ -47,7 +46,6 @@ export function StarrySky() {
     const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches
     const dpr = Math.min(window.devicePixelRatio || 1, 2)
     let stars: Star[] = []
-    let nebula: HTMLCanvasElement | null = null
     let shooting: Shooting | null = null
     let nextShot = performance.now() + 6000 + Math.random() * 8000
     let raf = 0
@@ -65,48 +63,6 @@ export function StarrySky() {
     let warpX = 0 // décalage horizontal accumulé par les voyages
     let warpStart = -1
     let warpDir = 0
-
-    /**
-     * Voie lactée : bande diagonale de nuages, dessinée une fois, à la résolution de l'écran.
-     * (En basse résolution agrandie, les très faibles transparences faisaient apparaître un quadrillage.)
-     */
-    const buildNebula = () => {
-      const scale = dpr
-      const c = document.createElement('canvas')
-      c.width = Math.max(1, Math.round(w * 1.3 * scale))
-      c.height = Math.max(1, Math.round(h * 1.3 * scale))
-      const n = c.getContext('2d')!
-      const cw = c.width
-      const ch = c.height
-      // Bande du coin haut-droit vers le bas-gauche
-      const blobs = Math.round(26 + (((cw * ch) / (scale * scale)) * 0.1225) / 9000)
-      for (let i = 0; i < blobs; i++) {
-        const t = Math.random()
-        const x = cw * (0.95 - t * 0.9) + (Math.random() - 0.5) * cw * 0.22
-        const y = ch * (0.05 + t * 0.9) + (Math.random() - 0.5) * ch * 0.18
-        const r = (0.08 + Math.random() * 0.2) * Math.max(cw, ch)
-        const hue = Math.random()
-        const color = hue < 0.55 ? '46,91,255' : hue < 0.85 ? '120,90,220' : '255,140,190'
-        const a = 0.035 + Math.random() * 0.05
-        const g = n.createRadialGradient(x, y, 0, x, y, r)
-        g.addColorStop(0, `rgba(${color},${a})`)
-        g.addColorStop(1, `rgba(${color},0)`)
-        n.fillStyle = g
-        n.fillRect(x - r, y - r, r * 2, r * 2)
-      }
-      // Poussière d'étoiles très fine dans la bande (petits points ronds, pas de carrés)
-      const dust = Math.round((cw * ch) / (2600 * scale * scale))
-      for (let i = 0; i < dust; i++) {
-        const t = Math.random()
-        const x = cw * (0.95 - t * 0.9) + (Math.random() - 0.5) * cw * 0.16
-        const y = ch * (0.05 + t * 0.9) + (Math.random() - 0.5) * ch * 0.12
-        n.fillStyle = `rgba(220,230,255,${0.12 + Math.random() * 0.28})`
-        n.beginPath()
-        n.arc(x, y, 0.35 * scale, 0, Math.PI * 2)
-        n.fill()
-      }
-      nebula = c
-    }
 
     const resize = () => {
       w = window.innerWidth
@@ -135,24 +91,12 @@ export function StarrySky() {
           layer,
         }
       })
-      buildNebula()
       draw(performance.now(), 0)
     }
 
     const draw = (t: number, warpSpeed: number) => {
       ctx.clearRect(0, 0, w, h)
       const time = t / 1000
-
-      // Voie lactée : dérive lente + parallaxe très faible
-      if (nebula) {
-        const driftX = Math.sin(time / 47) * w * 0.03
-        const driftY = Math.cos(time / 61) * h * 0.02
-        const nx = -w * 0.15 + driftX - smoothMX * 6 + warpX * 0.01
-        const ny = -h * 0.15 + driftY - wrap(smoothScroll * 0.012, h * 0.3) - smoothMY * 6
-        ctx.globalAlpha = reduced ? 0.9 : 0.75 + 0.25 * Math.sin(time / 9)
-        ctx.drawImage(nebula, nx, ny, w * 1.3, h * 1.3)
-        ctx.globalAlpha = 1
-      }
 
       for (const s of stars) {
         const depth = DEPTH[s.layer]
