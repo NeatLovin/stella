@@ -77,7 +77,7 @@ export function PhotoWall({ spread = false }: { spread?: boolean }) {
             aria-label={p.caption || 'Voir la photo'}
           >
             {urls[p.image_path] ? (
-              <img src={urls[p.image_path]} alt="" className="block aspect-square w-full object-cover" />
+              <img decoding="async" src={urls[p.image_path]} alt="" className="block aspect-square w-full object-cover" />
             ) : (
               <span className="block aspect-square w-full bg-mist/30" />
             )}
@@ -170,7 +170,7 @@ function AddPhoto({ file, onCancel, onDone }: { file: File; onCancel: () => void
   return (
     <div className="space-y-5">
       <h2 className="font-display text-3xl font-medium">Nouvelle photo</h2>
-      {preview && <img src={preview} alt="Aperçu" className="max-h-[40dvh] w-full rounded-xl object-contain" />}
+      {preview && <img decoding="async" src={preview} alt="Aperçu" className="max-h-[40dvh] w-full rounded-xl object-contain" />}
       <label className="block">
         <span className="mb-1.5 block text-sm text-mist">Légende (facultatif)</span>
         <input
@@ -232,7 +232,7 @@ function ViewPhoto({
     <div>
       {src && (
         <button type="button" onClick={onZoom} className="block w-full" aria-label="Voir la photo en plein écran">
-          <img src={src} alt={photo.caption ?? ''} className="max-h-[60dvh] w-full rounded-xl object-contain" />
+          <img decoding="async" src={src} alt={photo.caption ?? ''} className="max-h-[60dvh] w-full rounded-xl object-contain" />
         </button>
       )}
       <div className="mt-3 flex items-center justify-between text-mist">

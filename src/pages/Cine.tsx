@@ -471,6 +471,8 @@ function CategoryRow({
   return (
     <motion.section
       aria-label={cat.name}
+      // Une rangée hors de l'écran n'est ni mise en page ni peinte tant qu'on n'y arrive pas
+      style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 300px' }}
       initial={{ opacity: 0, y: 18 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '0px 0px -40px 0px' }}
@@ -554,6 +556,7 @@ function Poster({
     <div className={`relative aspect-[2/3] overflow-hidden rounded-xl border border-glow/15 bg-dusk/70 ${className}`}>
       {src ? (
         <img
+          decoding="async"
           src={src}
           alt=""
           loading={eager ? 'eager' : 'lazy'}

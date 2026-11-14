@@ -107,6 +107,7 @@ function WishCard({ item, src, onEdit, onToggle }: { item: WishlistItem; src?: s
         >
           {src ? (
             <img
+              decoding="async"
               src={src}
               alt=""
               className="h-full w-full object-cover opacity-0 transition-[opacity,transform] duration-700 group-hover:scale-[1.04] data-[loaded=true]:opacity-100"
@@ -281,7 +282,7 @@ function WishForm({
         <div className="flex items-center gap-4">
           <div className="h-24 w-20 shrink-0 overflow-hidden rounded-xl border border-glow/20 bg-dusk/60">
             {preview && !removePhoto ? (
-              <img src={preview} alt="Aperçu" className="h-full w-full object-cover" />
+              <img decoding="async" src={preview} alt="Aperçu" className="h-full w-full object-cover" />
             ) : (
               <div className="flex h-full items-center justify-center text-mist/60">
                 <IconImage />

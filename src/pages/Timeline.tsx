@@ -252,7 +252,9 @@ function Constellation({
                 >
                   {e.image_path && (
                     <span className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-dusk ring-1 ring-starlight/25" aria-hidden>
-                      {urls[e.image_path] && <img src={urls[e.image_path]} alt="" loading="lazy" className="h-full w-full object-cover" />}
+                      {urls[e.image_path] && (
+                        <img decoding="async" src={urls[e.image_path]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                      )}
                     </span>
                   )}
                   <span className="min-w-0 flex-1">
@@ -408,7 +410,7 @@ function EventDetail({ event, src, onChanged }: { event: TimelineEvent; src?: st
         <div className="-mx-2 mb-5 overflow-hidden rounded-[1.25rem] border border-glow/15 bg-dusk/60">
           {src ? (
             <button type="button" onClick={() => setZoom(true)} className="relative block w-full" aria-label="Voir la photo en plein écran">
-              <img src={src} alt={event.title} className="max-h-[48dvh] w-full object-cover" />
+              <img decoding="async" src={src} alt={event.title} className="max-h-[48dvh] w-full object-cover" />
               <span
                 className="absolute right-2 bottom-2 rounded-full bg-night/70 px-2.5 py-1 text-xs text-starlight backdrop-blur"
                 aria-hidden

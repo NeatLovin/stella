@@ -772,7 +772,7 @@ function FilmOfTheNight({ day }: { day: AdventDay }) {
       <div className="flex gap-4">
         <div className="aspect-[2/3] w-28 flex-none overflow-hidden rounded-xl border border-glow/20 bg-dusk/60">
           {poster ? (
-            <img src={poster} alt="" className="h-full w-full object-cover" />
+            <img decoding="async" src={poster} alt="" className="h-full w-full object-cover" />
           ) : (
             <div className="flex h-full items-center justify-center text-3xl">🎬</div>
           )}

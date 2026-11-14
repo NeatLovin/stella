@@ -99,7 +99,7 @@ export function Lightbox({ images, index, onIndexChange, onClose }: Props) {
               onDragEnd={onDragEnd}
             >
               {image.src ? (
-                <img src={image.src} alt={image.alt} draggable={false} className="max-h-full max-w-full object-contain" />
+                <img decoding="async" src={image.src} alt={image.alt} draggable={false} className="max-h-full max-w-full object-contain" />
               ) : (
                 <span className="h-2 w-2 animate-ping rounded-full bg-glow" role="status" aria-label="Chargement" />
               )}

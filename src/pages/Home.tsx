@@ -169,12 +169,10 @@ export function Home() {
           <motion.div
             className="relative mx-auto aspect-[1/1] w-full max-w-[36rem]"
             variants={{
-              hidden: { opacity: 0, scale: 0.94, filter: 'blur(6px)' },
+              hidden: { opacity: 0, scale: 0.94 },
               show: {
                 opacity: 1,
                 scale: 1,
-                filter: 'blur(0px)',
-                transitionEnd: { filter: 'none' },
                 transition: { duration: 0.9, ease: EASE_OUT },
               },
             }}
@@ -197,9 +195,9 @@ function Rolling({ n }: { n: number }) {
         <motion.span
           key={n}
           className="inline-block"
-          initial={{ y: '55%', opacity: 0, filter: 'blur(3px)' }}
-          animate={{ y: 0, opacity: 1, filter: 'blur(0px)' }}
-          exit={{ y: '-55%', opacity: 0, filter: 'blur(3px)' }}
+          initial={{ y: '55%', opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: '-55%', opacity: 0 }}
           transition={{ duration: 0.38, ease: EASE_OUT }}
         >
           {n}

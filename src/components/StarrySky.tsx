@@ -91,6 +91,7 @@ export function StarrySky() {
           layer,
         }
       })
+      stars.sort((p, q) => p.tint - q.tint)
       draw(performance.now(), 0)
     }
 
@@ -98,43 +99,72 @@ export function StarrySky() {
       ctx.clearRect(0, 0, w, h)
       const time = t / 1000
 
-      for (const s of stars) {
-        const depth = DEPTH[s.layer]
-        // Position avec parallaxe (défilement + souris) et voyage, en boucle sur l'écran
-        const x = wrap(s.x - smoothMX * depth * 120 + warpX * depth * 6, w)
-        const y = wrap(s.y - smoothScroll * depth - smoothMY * depth * 80, h)
-        const tw = reduced ? 1 : 0.6 + 0.4 * Math.sin(time * s.speed + s.phase)
-        const a = s.base * tw
-        const rgb = TINTS[s.tint]
-
-        if (warpSpeed > 0.02) {
-          // Pendant le voyage : traînées dans le sens du déplacement, plus longues pour les étoiles proches
+      // Les étoiles sont triées par couleur à la création : on ne change de couleur que rarement,
+      // et l'opacité passe par globalAlpha (bien plus rapide que de recréer une couleur par étoile).
+      if (warpSpeed > 0.02) {
+        // Pendant le voyage : une seule traînée par couche et par couleur (9 tracés au lieu de 380)
+        ctx.lineCap = 'round'
+        for (let layer = 0; layer < 3; layer++) {
+          const depth = DEPTH[layer]
           const len = warpSpeed * (8 + depth * 420)
-          ctx.strokeStyle = `rgba(${rgb},${Math.min(1, a * (0.6 + warpSpeed))})`
-          ctx.lineWidth = s.r * 1.4
-          ctx.lineCap = 'round'
-          ctx.beginPath()
-          ctx.moveTo(x, y)
-          ctx.lineTo(x + warpDir * len, y)
-          ctx.stroke()
-          continue
+          for (let tint = 0; tint < 3; tint++) {
+            ctx.beginPath()
+            let n = 0
+            let rSum = 0
+            let aSum = 0
+            for (const s of stars) {
+              if (s.layer !== layer || s.tint !== tint) continue
+              const x = wrap(s.x - smoothMX * depth * 120 + warpX * depth * 6, w)
+              const y = wrap(s.y - smoothScroll * depth - smoothMY * depth * 80, h)
+              ctx.moveTo(x, y)
+              ctx.lineTo(x + warpDir * len, y)
+              n++
+              rSum += s.r
+              aSum += s.base
+            }
+            if (!n) continue
+            ctx.globalAlpha = Math.min(1, (aSum / n) * (0.6 + warpSpeed))
+            ctx.strokeStyle = `rgb(${TINTS[tint]})`
+            ctx.lineWidth = (rSum / n) * 1.4
+            ctx.stroke()
+          }
         }
-
-        ctx.fillStyle = `rgba(${rgb},${a})`
-        ctx.beginPath()
-        ctx.arc(x, y, s.r, 0, Math.PI * 2)
-        ctx.fill()
-        if (s.layer === 2 && s.r > 1.3) {
-          // Croix de diffraction sur les étoiles proches et brillantes
-          ctx.strokeStyle = `rgba(170,195,255,${a * 0.4})`
-          ctx.lineWidth = 0.6
-          ctx.beginPath()
-          ctx.moveTo(x - s.r * 4.5, y)
-          ctx.lineTo(x + s.r * 4.5, y)
-          ctx.moveTo(x, y - s.r * 4.5)
-          ctx.lineTo(x, y + s.r * 4.5)
-          ctx.stroke()
+        ctx.globalAlpha = 1
+      } else {
+        let tint = -1
+        for (const s of stars) {
+          const depth = DEPTH[s.layer]
+          // Position avec parallaxe (défilement + souris) et voyage, en boucle sur l'écran
+          const x = wrap(s.x - smoothMX * depth * 120 + warpX * depth * 6, w)
+          const y = wrap(s.y - smoothScroll * depth - smoothMY * depth * 80, h)
+          const a = s.base * (reduced ? 1 : 0.6 + 0.4 * Math.sin(time * s.speed + s.phase))
+          if (s.tint !== tint) {
+            tint = s.tint
+            ctx.fillStyle = `rgb(${TINTS[tint]})`
+          }
+          ctx.globalAlpha = a
+          if (s.r < 0.9) {
+            // Les toutes petites étoiles : un carré d'un pixel suffit, l'œil n'y voit pas de différence
+            ctx.fillRect(x - s.r, y - s.r, s.r * 2, s.r * 2)
+          } else {
+            ctx.beginPath()
+            ctx.arc(x, y, s.r, 0, Math.PI * 2)
+            ctx.fill()
+          }
+          if (s.layer === 2 && s.r > 1.3) {
+            // Croix de diffraction sur les étoiles proches et brillantes
+            ctx.globalAlpha = a * 0.4
+            ctx.strokeStyle = 'rgb(170,195,255)'
+            ctx.lineWidth = 0.6
+            ctx.beginPath()
+            ctx.moveTo(x - s.r * 4.5, y)
+            ctx.lineTo(x + s.r * 4.5, y)
+            ctx.moveTo(x, y - s.r * 4.5)
+            ctx.lineTo(x, y + s.r * 4.5)
+            ctx.stroke()
+          }
         }
+        ctx.globalAlpha = 1
       }
 
       if (shooting) {

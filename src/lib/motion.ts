@@ -17,14 +17,14 @@ export const stagger = (step = 0.07, delay = 0): Variants => ({
   show: { transition: { staggerChildren: step, delayChildren: delay } },
 })
 
-/** Apparition : fondu, légère montée et flou qui se dissipe */
+/** Apparition : fondu et légère montée (sans flou : un flou animé coûte cher sur téléphone) */
 export const rise: Variants = {
-  hidden: { opacity: 0, y: 14, filter: 'blur(4px)' },
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transitionEnd: { filter: 'none' }, transition: { duration: 0.55, ease: EASE_OUT } },
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_OUT } },
 }
 
 /** Même apparition, décalée dans le temps */
 export const riseLater = (delay: number): Variants => ({
   hidden: rise.hidden,
-  show: { opacity: 1, y: 0, filter: 'blur(0px)', transitionEnd: { filter: 'none' }, transition: { duration: 0.55, ease: EASE_OUT, delay } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: EASE_OUT, delay } },
 })

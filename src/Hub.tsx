@@ -91,18 +91,15 @@ function AnimatedRoutes() {
         key={location.pathname}
         custom={dir}
         variants={{
-          enter: (d: number) => ({ opacity: 0, x: d * shift, filter: reduced ? 'none' : 'blur(3px)' }),
+          enter: (d: number) => ({ opacity: 0, x: d * shift }),
           center: {
             opacity: 1,
             x: 0,
-            filter: 'blur(0px)',
-            transitionEnd: { filter: 'none' },
             transition: { duration: reduced ? 0.01 : 0.34, ease: EASE_OUT },
           },
           exit: (d: number) => ({
             opacity: 0,
             x: -d * shift * 0.6,
-            filter: reduced ? 'none' : 'blur(3px)',
             transition: { duration: reduced ? 0.01 : 0.16, ease: 'easeIn' },
           }),
         }}
