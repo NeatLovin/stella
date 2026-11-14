@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { BottomSheet } from '../components/BottomSheet'
+import { HeartConstellation } from '../components/HeartConstellation'
 import { Lightbox } from '../components/Lightbox'
 import { IconExternal } from '../components/icons'
 import { ErrorNote, Page, Skeleton } from '../components/Page'
@@ -12,11 +13,6 @@ import { diffDays, formatRange, formatShort, todayISO } from '../lib/dates'
 import { compressImage } from '../lib/image'
 import { EASE_OUT } from '../lib/motion'
 import { parseSpotify, spotifyEmbedUrl, spotifyOpenUrl } from '../lib/spotify'
-
-// Positions horizontales (fraction de la largeur) : une constellation irrégulière mais stable
-const XS = [0.22, 0.68, 0.4, 0.78, 0.3, 0.62, 0.2, 0.72, 0.46, 0.8]
-const STEP = 132
-const TOP = 40
 
 export function Timeline() {
   const { data, error, loading, reload } = useLoad(api.getTimeline, 'timeline')
@@ -36,7 +32,6 @@ export function Timeline() {
     if (!target) return
     setDir(d)
     setSelectedId(target.id)
-    document.querySelector(`[data-event="${target.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: desktop ? 'nearest' : 'center' })
   }
 
   // Flèches du clavier ← →, sauf pendant une saisie
@@ -80,19 +75,17 @@ export function Timeline() {
       wide
       eyebrow="Notre histoire"
       title="Notre constellation"
-      intro={`Chaque étoile est un moment à nous. ${desktop ? 'Clique-en une pour la revoir, puis voyage de l’une à l’autre avec ← →.' : 'Touche-en une pour la revoir, puis glisse pour passer à la suivante.'}`}
+      intro={`Chaque étoile est un moment à nous, et ensemble elles dessinent quelque chose. ${desktop ? 'Clique sur une étoile pour la revoir, puis voyage de l’une à l’autre avec ← →.' : 'Touche une étoile pour la revoir, puis glisse pour passer à la suivante.'}`}
     >
       {loading && <Skeleton variant="timeline" />}
       {error && <ErrorNote message={error} onRetry={reload} />}
       {data && data.length === 0 && <p className="text-mist">La constellation attend sa première étoile.</p>}
       {data && data.length > 0 && (
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] lg:items-start lg:gap-14 xl:grid-cols-[minmax(0,1fr)_minmax(0,31rem)] xl:gap-20">
-          <Constellation
-            events={data}
-            urls={urls}
-            activeId={desktop ? (selected?.id ?? null) : null}
-            onSelect={(e) => setSelectedId(e.id)}
-          />
+          <div>
+            <HeartConstellation events={sorted} urls={urls} activeId={selected?.id ?? null} onSelect={(e) => setSelectedId(e.id)} />
+            <MemoryList events={sorted} urls={urls} activeId={selected?.id ?? null} onSelect={(e) => setSelectedId(e.id)} />
+          </div>
           {desktop && (
             <aside
               aria-label="Souvenir sélectionné"
@@ -114,7 +107,8 @@ export function Timeline() {
   )
 }
 
-function Constellation({
+/** Le fil de nos souvenirs, en liste : lisible d'un coup d'œil, et navigable au clavier */
+function MemoryList({
   events,
   urls,
   activeId,
@@ -125,162 +119,61 @@ function Constellation({
   activeId: string | null
   onSelect: (e: TimelineEvent) => void
 }) {
-  const sorted = [...events].sort((a, b) => a.date_start.localeCompare(b.date_start))
-  const points = sorted.map((e, i) => ({ e, x: XS[i % XS.length], y: TOP + i * STEP }))
-  const height = TOP * 2 + (sorted.length - 1) * STEP
-  const ref = useRef<HTMLDivElement>(null)
-  const [width, setWidth] = useState(0)
-  const [burst, setBurst] = useState<string | null>(null)
-
-  // L'étoile touchée s'illumine, puis sa fiche s'ouvre
-  const open = (e: TimelineEvent) => {
-    setBurst(e.id)
-    window.setTimeout(() => onSelect(e), 220)
-    window.setTimeout(() => setBurst(null), 700)
-  }
-
-  // Halo qui suit la souris ou le doigt (variables CSS, sans re-rendu)
-  const moveHalo = (ev: ReactPointerEvent<HTMLDivElement>) => {
-    const el = ref.current
-    // À la souris, c'est le halo plein écran (CursorGlow) qui prend le relais
-    if (!el || ev.pointerType === 'mouse') return
-    const r = el.getBoundingClientRect()
-    el.style.setProperty('--hx', `${ev.clientX - r.left}px`)
-    el.style.setProperty('--hy', `${ev.clientY - r.top}px`)
-    el.dataset.halo = 'on'
-  }
-  const hideHalo = () => {
-    if (ref.current) ref.current.dataset.halo = 'off'
-  }
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const ro = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-
   return (
-    <div
-      ref={ref}
-      className="relative"
-      style={{ height, containerType: 'inline-size' }}
-      onPointerMove={moveHalo}
-      onPointerDown={moveHalo}
-      onPointerLeave={hideHalo}
-      onPointerCancel={hideHalo}
-    >
-      <div className="star-halo pointer-events-none absolute -inset-x-5 inset-y-0" aria-hidden />
-      {width > 0 && (
-        <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox={`0 0 ${width} ${height}`} aria-hidden>
-          {points.slice(1).map((p, i) => {
-            const prev = points[i]
-            return (
-              <motion.line
-                key={p.e.id}
-                x1={prev.x * width}
-                y1={prev.y}
-                x2={p.x * width}
-                y2={p.y}
-                stroke="url(#line)"
-                strokeWidth={1}
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ delay: 0.25 + i * 0.18, duration: 0.5, ease: 'easeOut' }}
-              />
-            )
-          })}
-          <defs>
-            <linearGradient id="line" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1="0" y2={height}>
-              <stop offset="0" stopColor="#7DA2FF" stopOpacity="0.7" />
-              <stop offset="1" stopColor="#2E5BFF" stopOpacity="0.5" />
-            </linearGradient>
-          </defs>
-        </svg>
-      )}
-
-      <ol>
-        {points.map(({ e, x, y }, i) => {
-          const labelRight = x < 0.5
-          return (
-            <motion.li
-              key={e.id}
-              data-event={e.id}
-              className="absolute scroll-my-32"
-              style={{ left: `${x * 100}%`, top: y }}
-              initial={{ opacity: 0, scale: 0.4 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 + i * 0.18, duration: 0.45 }}
+    <div className="mt-8">
+      <h2 className="mb-3 text-xs font-medium tracking-[0.2em] text-gold/90 uppercase">✦ Le fil de notre histoire</h2>
+      <ol className="space-y-1.5">
+        {events.map((e) => (
+          <li key={e.id} data-event={e.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(e)}
+              aria-current={activeId === e.id ? 'true' : undefined}
+              className={`press flex w-full items-center gap-3 rounded-2xl border px-2.5 py-2 text-left transition-colors ${
+                activeId === e.id ? 'border-glow/40 bg-glow/10' : 'border-transparent hover:border-glow/20 hover:bg-starlight/[0.03]'
+              }`}
             >
-              <button
-                type="button"
-                onClick={() => open(e)}
-                aria-current={activeId === e.id ? 'true' : undefined}
-                className={`group absolute top-0 flex -translate-y-1/2 items-center gap-3 ${
-                  labelRight ? '-left-[22px] flex-row text-left' : '-right-[22px] flex-row-reverse text-right'
+              <span
+                className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg ring-1 ${
+                  e.highlight ? 'bg-gold/10 ring-gold/40' : 'bg-dusk ring-starlight/15'
                 }`}
+                aria-hidden
               >
-                <span className="relative flex h-11 w-11 shrink-0 items-center justify-center">
-                  <span
-                    className={`absolute rounded-full blur-md transition-transform duration-300 group-hover:scale-125 group-active:scale-150 ${
-                      activeId === e.id ? 'scale-150' : ''
-                    } ${e.highlight ? 'h-9 w-9 bg-gold/50' : 'h-7 w-7 bg-glow/45'}`}
-                  />
-                  <span className={`relative rounded-full ${e.highlight ? 'h-3.5 w-3.5 bg-gold' : 'h-2.5 w-2.5 bg-starlight'}`} />
-                  {activeId === e.id && (
-                    <motion.span
-                      layoutId="active-star"
-                      className={`absolute h-9 w-9 rounded-full border ${e.highlight ? 'border-gold/70' : 'border-glow/80'}`}
-                      transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-                      aria-hidden
-                    />
-                  )}
-                  {burst === e.id && (
-                    <motion.span
-                      className={`absolute h-3 w-3 rounded-full ${e.highlight ? 'bg-gold' : 'bg-glow'}`}
-                      initial={{ scale: 1, opacity: 0.9 }}
-                      animate={{ scale: 9, opacity: 0 }}
-                      transition={{ duration: 0.6, ease: 'easeOut' }}
-                      aria-hidden
-                    />
-                  )}
-                </span>
-                <span
-                  className={`flex items-center gap-2.5 ${labelRight ? 'flex-row' : 'flex-row-reverse'}`}
-                  style={{ width: `min(15rem, calc(${(labelRight ? 1 - x : x) * 100}cqw - 30px))` }}
-                >
-                  {e.image_path && (
-                    <span className="h-9 w-9 shrink-0 overflow-hidden rounded-md bg-dusk ring-1 ring-starlight/25" aria-hidden>
-                      {urls[e.image_path] && (
-                        <img decoding="async" src={urls[e.image_path]} alt="" loading="lazy" className="h-full w-full object-cover" />
-                      )}
+                {e.image_path && urls[e.image_path] ? (
+                  <img decoding="async" src={urls[e.image_path]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-lg">{e.icon || '✦'}</span>
+                )}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="font-display block truncate text-[1.15rem] leading-tight text-starlight">
+                  {e.image_path && e.icon && (
+                    <span className="mr-1.5 text-[0.9rem]" aria-hidden>
+                      {e.icon}
                     </span>
                   )}
-                  <span className="min-w-0 flex-1">
-                    <span className="font-display block text-[1.2rem] leading-[1.1] font-medium text-starlight">
-                      <span className="mr-1.5 text-[0.95rem]" aria-hidden>
-                        {e.icon}
+                  {e.title}
+                </span>
+                <span className="block text-xs text-mist/80">
+                  {formatShort(e.date_start)}
+                  {e.song_url && (
+                    <>
+                      <span className="ml-1.5 text-glow" aria-hidden>
+                        ♪
                       </span>
-                      {e.title}
-                    </span>
-                    <span className="mt-1 block text-xs text-mist/80">
-                      {formatShort(e.date_start)}
-                      {e.song_url && (
-                        <>
-                          <span className="ml-1.5 text-glow" aria-hidden>
-                            ♪
-                          </span>
-                          <span className="sr-only">, avec une chanson</span>
-                        </>
-                      )}
-                    </span>
-                  </span>
+                      <span className="sr-only">, avec une chanson</span>
+                    </>
+                  )}
                 </span>
-              </button>
-            </motion.li>
-          )
-        })}
+              </span>
+              {e.highlight && (
+                <span className="text-gold" aria-hidden>
+                  ★
+                </span>
+              )}
+            </button>
+          </li>
+        ))}
       </ol>
     </div>
   )
