@@ -6,6 +6,7 @@ export const SettingsContext = createContext<Settings>({
   his_name: '',
   couple_start: '2026-07-30',
   welcome: '',
+  advent_live: false,
   flower_message: '',
 })
 export const useSettings = () => useContext(SettingsContext)

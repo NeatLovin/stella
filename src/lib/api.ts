@@ -14,6 +14,8 @@ export interface Settings {
   welcome: string
   /** Message de la carte du lys caché (paragraphes séparés par une ligne vide) */
   flower_message: string
+  /** Calendrier de l'Avent visible (réglage « advent_live » = « oui ») ; caché tant qu'il n'est pas lancé */
+  advent_live: boolean
 }
 
 export interface TimelineEvent {
@@ -166,6 +168,7 @@ function createSupabaseApi(): Api {
         couple_start: map.couple_start ?? '2026-07-30',
         welcome: map.welcome ?? '',
         flower_message: map.flower_message ?? '',
+        advent_live: map.advent_live?.trim().toLowerCase() === 'oui',
       }
     },
     async getTimeline() {

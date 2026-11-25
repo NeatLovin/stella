@@ -19,7 +19,7 @@ import { EASE_OUT, rise, stagger } from '../lib/motion'
 const plural = (n: number, one: string, many: string) => (n > 1 ? many : one)
 
 export function Home() {
-  const { her_name, his_name, couple_start, welcome } = useSettings()
+  const { her_name, his_name, couple_start, welcome, advent_live } = useSettings()
   const showWelcome = useShowWelcome()
   const desktop = useMediaQuery(DESKTOP)
   const [now, setNow] = useState(() => new Date())
@@ -150,7 +150,7 @@ export function Home() {
             </motion.button>
           )}
 
-          {isDecember(todayISO()) && (
+          {advent_live && isDecember(todayISO()) && (
             <motion.div variants={rise} className="flex flex-col">
               <AdventCard />
             </motion.div>

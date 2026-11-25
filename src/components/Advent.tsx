@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
+import { useSettings } from '../context'
 import { useDialog } from '../hooks/useDialog'
 import {
   adventDate,
@@ -101,6 +102,7 @@ export function AdventCard() {
 
 /** Pastille sur l'onglet « Nous » tant que l'étoile du jour n'est pas ouverte */
 export function useAdventBadge(): boolean {
+  const { advent_live } = useSettings()
   const [, tick] = useState(0)
   useEffect(() => {
     const sync = () => tick((n) => n + 1)
@@ -109,7 +111,7 @@ export function useAdventBadge(): boolean {
   }, [])
   const today = todayISO()
   const day = adventDayOf(today)
-  if (day === null) return false
+  if (!advent_live || day === null) return false
   return !readOpened().includes(adventDate(adventYear(today), day))
 }
 

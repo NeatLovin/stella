@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSettings } from '../context'
 import { isDecember, snowEnabled } from '../lib/advent'
 import { todayISO } from '../lib/dates'
 
@@ -7,6 +8,8 @@ import { todayISO } from '../lib/dates'
  * Désactivable (bouton dans le calendrier et sur la carte de l'accueil), absente si les animations sont réduites.
  */
 export function Snow() {
+  // Comme le calendrier, la neige attend que l'Avent soit lancé
+  const { advent_live } = useSettings()
   const [on, setOn] = useState(() => isDecember(todayISO()) && snowEnabled())
 
   useEffect(() => {
@@ -15,7 +18,7 @@ export function Snow() {
     return () => window.removeEventListener('stella:snow', sync)
   }, [])
 
-  if (!on) return null
+  if (!on || !advent_live) return null
   return <SnowCanvas />
 }
 
